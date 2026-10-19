@@ -1,11 +1,265 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="スタッフの希望をもとに月間シフトを作成するアプリ"><title>シフト管理システム</title><link rel="stylesheet" href="css/ress.css"><link rel="stylesheet" href="css/style.css"><script src="js/app.js" defer></script></head>
-<body><header><div class="header-inner"><a class="logo" href="#calendar-section">shift manager</a><nav><a href="#calendar-section">カレンダー</a><a href="#staff-section">スタッフ管理</a><a href="#conditions-section">生成条件</a><a href="#history-section">生成履歴</a></nav></div></header>
-<main class="container"><div class="page-heading"><div><p class="eyebrow">SHIFT PLANNER</p><h1>月間シフト</h1><p class="muted">スタッフの希望を確認しながら、シフトを作成・調整できます。</p></div><button class="secondary" id="exportBtn">データを書き出す</button></div>
-<section class="card" id="calendar-section"><div class="calendar-toolbar"><div class="toolbar"><button class="secondary" id="prevMonth">←</button><button class="secondary" id="todayMonth">今月</button><button class="secondary" id="nextMonth">→</button><span class="month-title" id="monthTitle"></span></div><div class="toolbar"><input type="date" id="generationStart" aria-label="生成開始日"><span>〜</span><input type="date" id="generationEnd" aria-label="生成終了日"><button class="primary" id="generateBtn">✨ 自動生成</button></div></div><div id="generationMessage" aria-live="polite"></div><div class="legend"><span>🟢 出勤</span><span>⚪ 休み</span><span>🔵 希望</span><span>灰色：出勤不可</span></div><div class="calendar-wrap"><div id="calendar" class="calendar"></div></div><p class="muted help-text">生成後のマスをクリックすると手動修正できます。未生成のマスをクリックすると勤務希望を登録できます。</p></section>
-<div class="grid"><section class="card" id="staff-section"><p class="eyebrow">TEAM</p><h2>スタッフ管理</h2><form id="staffForm"><div class="form-row"><div><label for="staffName">スタッフ名</label><input id="staffName" maxlength="40" placeholder="例：山田 花子" required></div><div><label for="staffLevel">レベル</label><select id="staffLevel"><option value="1">Lv1</option><option value="2">Lv2</option><option value="3">Lv3</option></select></div></div><div class="form-row"><div><label for="staffMax">最大連勤日数</label><select id="staffMax"><option>3</option><option>4</option><option selected>5</option><option>6</option><option>7</option></select></div><div><label>アイコンカラー</label><div id="colorChoices" class="color-list"></div></div></div><label>絶対に出勤できない曜日</label><div id="unavailableChoices" class="weekday-list"></div><div class="form-actions"><button class="primary" id="staffSubmit">＋ スタッフ追加</button><button class="secondary hidden" id="staffCancelEdit" type="button">編集をキャンセル</button></div></form><div class="subsection-heading"><h3>登録スタッフ</h3><span id="staffCount" class="count-pill">0人</span></div><div id="staffList" class="staff-list"></div></section>
-<section class="card" id="conditions-section"><p class="eyebrow">RULES</p><h2>シフト生成条件</h2><div class="form-row"><div><label for="basicRequired">基本の必要人数</label><input type="number" id="basicRequired" min="0" max="100" value="3"></div><div><label for="levelTarget">必要なレベル</label><select id="levelTarget"><option value="1">Lv1以上</option><option value="2">Lv2以上</option><option value="3" selected>Lv3以上</option></select></div></div><div class="form-row"><div><label for="levelRequired">対象レベルの必要人数</label><input type="number" id="levelRequired" min="0" max="100" value="1"></div><div class="checkbox-field"><input type="checkbox" id="consecutiveEnabled" checked><label for="consecutiveEnabled">最大連勤日数を考慮する</label></div></div><label>毎週の定休日</label><div id="closedWeekdays" class="weekday-list"></div><div class="form-row"><div><label for="holidayDate">指定休業日</label><input type="date" id="holidayDate"></div><div class="button-bottom"><button class="secondary" id="addHoliday" type="button">＋ 休業日を追加</button></div></div><div id="holidayList" class="holiday-list"></div><div class="form-actions"><button class="primary" id="saveSettings" type="button">条件を保存</button><span id="settingsMessage" class="muted"></span></div><div class="notice">自動生成は候補作成の補助機能です。結果を確認し、必要に応じて手動で調整してください。</div></section></div>
-<section class="card" id="history-section"><div class="section-heading"><div><p class="eyebrow">HISTORY</p><h2>自動生成履歴</h2></div><button class="secondary" id="clearHistory">履歴を削除</button></div><div id="historyList" class="muted"></div></section><footer><span>shift manager</span><span>データはこのブラウザ内に保存されます。</span></footer></main>
-<div class="modal" id="requestModal"><div class="modal-box"><p class="eyebrow">REQUEST</p><h2>勤務希望</h2><p id="requestContext" class="muted"></p><div class="form-row"><div><label for="reqDate">日付</label><input type="date" id="reqDate"></div><div><label for="reqEmployee">スタッフ</label><select id="reqEmployee"></select></div></div><div class="form-row"><div><label for="reqType">希望</label><select id="reqType"><option value="work">出勤希望</option><option value="off">休み希望</option><option value="none">未設定</option></select></div><div><label for="reqComment">コメント</label><input id="reqComment" maxlength="120" placeholder="任意"></div></div><div class="modal-actions"><button class="secondary" id="reqCancel">閉じる</button><button class="primary" id="reqSave">希望を保存</button></div></div></div>
-<div class="modal" id="shiftModal"><div class="modal-box"><p class="eyebrow">EDIT SHIFT</p><h2>シフト手動修正</h2><p id="shiftTitle" class="muted"></p><div class="form-row"><div><label for="shiftStatus">勤務状態</label><select id="shiftStatus"><option value="work">出勤</option><option value="off">休み</option></select></div><div><label for="shiftComment">コメント</label><input id="shiftComment" maxlength="120"></div></div><div class="modal-actions"><button class="secondary" id="shiftCancel">閉じる</button><button class="primary" id="shiftSave">変更を保存</button></div></div></div>
-</body></html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="月間シフト作成を手助けするアプリ">
+    <title>シフト管理システム</title>
+    
+    <link rel="stylesheet" href="css/ress.css">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <script src="js/app.js" defer></script>
+  </head>
+  
+<body>
+  <header>
+    <div class="header-inner">
+      <a class="logo" href="#calendar-section">shift manager</a>
+      <nav>
+        <a href="#calendar-section">カレンダー</a>
+        <a href="#staff-section">スタッフ管理</a>
+        <a href="#conditions-section">生成条件</a>
+        <a href="#history-section">生成履歴</a>
+      </nav>
+    </div>
+  </header>
+  
+<main class="container">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">SHIFT PLANNER</p>
+      <h1>月間シフト</h1>
+      <p class="muted">スタッフの希望を確認しながら、シフトを作成・調整できます。</p>
+    </div>
+    <button class="secondary" id="exportBtn">データを書き出す</button>
+  </div>
+  
+<section class="card" id="calendar-section">
+  <div class="calendar-toolbar">
+    <div class="toolbar">
+      <button class="secondary" id="prevMonth">←</button>
+      <button class="secondary" id="todayMonth">今月</button>
+      <button class="secondary" id="nextMonth">→</button>
+      <span class="month-title" id="monthTitle"></span>
+    </div>
+    <div class="toolbar">
+      <input type="date" id="generationStart" aria-label="生成開始日">
+      <span>〜</span>
+      <input type="date" id="generationEnd" aria-label="生成終了日">
+      <button class="primary" id="generateBtn">自動生成</button>
+    </div>
+  </div>
+  <div id="generationMessage" aria-live="polite">
+  </div>
+  <div class="legend">
+    <span>緑：出勤</span>
+    <span>白：休み</span>
+    <span>青：希望</span>
+    <span>灰：出勤不可</span>
+  </div>
+  <div class="calendar-wrap">
+    <div id="calendar" class="calendar">
+    </div>
+  </div>
+  <p class="muted help-text">生成後のマスをクリックすると手動修正できます。未生成のマスをクリックすると勤務希望を登録できます。</p>
+</section>
+<div class="grid">
+  <section class="card" id="staff-section">
+    <p class="eyebrow">TEAM</p>
+    <h2>スタッフ管理</h2>
+    <form id="staffForm">
+      <div class="form-row">
+        <div>
+          <label for="staffName">スタッフ名</label>
+          <input id="staffName" maxlength="40" placeholder="例：山田 花子" required>
+        </div>
+        <div>
+          <label for="staffLevel">レベル</label>
+          <select id="staffLevel">
+            <option value="1">Lv1</option>
+            <option value="2">Lv2</option>
+            <option value="3">Lv3</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label for="staffMax">最大連勤日数</label>
+          <select id="staffMax">
+            <option>3</option>
+            <option>4</option>
+            <option selected>5</option>
+            <option>6</option>
+            <option>7</option>
+          </select>
+        </div>
+        <div>
+          <label>アイコンカラー</label>
+          <div id="colorChoices" class="color-list">
+      </div>
+        </div>
+      </div>
+      <label>絶対に出勤できない曜日</label>
+      <div id="unavailableChoices" class="weekday-list">
+      </div>
+      <div class="form-actions">
+        <button class="primary" id="staffSubmit">＋ スタッフ追加</button>
+        <button class="secondary hidden" id="staffCancelEdit" type="button">編集をキャンセル</button>
+      </div>
+    </form>
+    <div class="subsection-heading">
+      <h3>登録スタッフ</h3>
+      <span id="staffCount" class="count-pill">0人</span>
+    </div>
+    <div id="staffList" class="staff-list">
+    </div>
+  </section>
+<section class="card" id="conditions-section">
+  <p class="eyebrow">RULES</p>
+  <h2>シフト生成条件</h2>
+  <div class="form-row">
+    <div>
+      <label for="basicRequired">基本の必要人数</label>
+      <input type="number" id="basicRequired" min="0" max="100" value="3">
+    </div>
+    <div>
+      <label for="levelTarget">必要なレベル</label>
+      <select id="levelTarget">
+        <option value="1">Lv1以上</option>
+        <option value="2">Lv2以上</option>
+        <option value="3" selected>Lv3以上</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div>
+      <label for="levelRequired">対象レベルの必要人数</label>
+      <input type="number" id="levelRequired" min="0" max="100" value="1">
+    </div>
+    <div class="checkbox-field">
+      <input type="checkbox" id="consecutiveEnabled" checked>
+      <label for="consecutiveEnabled">最大連勤日数を考慮する</label>
+    </div>
+  </div>
+  <label>毎週の定休日</label>
+  <div id="closedWeekdays" class="weekday-list">
+  </div>
+  <div class="form-row">
+    <div>
+      <label for="holidayDate">指定休業日</label>
+      <input type="date" id="holidayDate">
+    </div>
+    <div class="button-bottom">
+      <button class="secondary" id="addHoliday" type="button">＋ 休業日を追加</button>
+    </div>
+  </div>
+  <div id="holidayList" class="holiday-list">
+    
+  </div>
+  <div class="form-actions">
+    <button class="primary" id="saveSettings" type="button">条件を保存</button>
+    <span id="settingsMessage" class="muted"></span>
+  </div>
+  <div class="notice">自動生成は候補作成の補助機能です。結果を確認し、必要に応じて手動で調整してください。</div>
+</section>
+</div>
+<section class="card" id="history-section">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">HISTORY</p>
+      <h2>自動生成履歴</h2>
+    </div>
+    <button class="secondary" id="clearHistory">履歴を削除</button>
+  </div>
+  <div id="historyList" class="muted">
+  </div>
+</section>
+  <footer>
+    <span>shift manager</span>
+    <span>データはこのブラウザ内に保存されます。</span>
+  </footer>
+</main>
+  
+<div class="modal" id="requestModal"><div class="modal-box">
+  <p class="eyebrow">REQUEST</p>
+  <h2>勤務希望</h2>
+  <p id="requestContext" class="muted"></p>
+  <div class="form-row">
+    <div>
+      <label for="reqDate">日付</label>
+      <input type="date" id="reqDate">
+    </div>
+    <div>
+      <label for="reqEmployee">スタッフ</label>
+      <select id="reqEmployee">
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div>
+      <label for="reqType">希望</label>
+      <select id="reqType">
+        <option value="work">出勤希望</option>
+        <option value="off">休み希望</option>
+        <option value="none">未設定</option>
+      </select>
+    </div>
+    <div>
+      <label for="reqComment">コメント</label>
+      <input id="reqComment" maxlength="120" placeholder="任意">
+    </div>
+  </div>
+  <div class="modal-actions">
+    <button class="secondary" id="reqCancel">閉じる</button>
+    <button class="primary" id="reqSave">希望を保存</button>
+  </div>
+</div>
+</div>
+  
+<div class="modal" id="shiftModal">
+  <div class="modal-box">
+    <p class="eyebrow">EDIT SHIFT</p>
+    <h2>シフト手動修正</h2>
+    <p id="shiftTitle" class="muted">
+    </p>
+    <div class="form-row">
+      <div>
+        <label for="shiftStatus">勤務状態</label>
+        <select id="shiftStatus">
+          <option value="work">出勤</option>
+          <option value="off">休み</option>
+        </select>
+      </div>
+      <div>
+        <label for="shiftComment">コメント</label>
+        <input id="shiftComment" maxlength="120">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" id="shiftCancel">閉じる</button>
+      <button class="primary" id="shiftSave">変更を保存</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
