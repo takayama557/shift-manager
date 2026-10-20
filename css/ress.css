@@ -1,1 +1,28 @@
-*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body,h1,h2,h3,p{margin:0}button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:wait;opacity:.6}a{color:inherit}
+*{
+  box-sizing:border-box
+}
+html{
+  -webkit-text-size-adjust:100%
+}
+body
+,h1
+,h2
+,h3
+,p{
+  margin:0
+}
+button,
+input,
+select{
+  font:inherit
+}
+button{
+  cursor:pointer
+}
+button:disabled{
+  cursor:wait;
+  opacity:.6
+}
+a{
+  color:inherit
+}
