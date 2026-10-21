@@ -1,9 +1,15 @@
+@charset "UTF-8";
+
+/* 共通部分 */
 body{
-  font-family:-apple-system,BlinkMacSystemFont,"Yu Gothic","Meiryo",sans-serif;
+  font-family: "Kiwi Maru", serif;
+  font-weight: 400;
+  font-style: normal;
   background:#f7f8fc;
   color: #384152;
   line-height:1.55
 }
+/* ヘッダー */
 header{
   position:sticky;
   top:0;
@@ -532,9 +538,3 @@ footer{
     flex-direction:column
   }
 }
-
-
-
-
-
-
