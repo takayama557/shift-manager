@@ -208,6 +208,14 @@ function init() {
     $("clearHistory").onclick = clearHistory;
     $("exportBtn").onclick = exportData;
 
+    // バックアップ読み込みボタンを押すと、ファイル選択画面を開く
+    $("importBtn").onclick = () => {
+    $("importFile").click();
+    };
+
+    // 選択したファイルを読み込む
+    $("importFile").onchange = importData;
+
     // 保存済みの設定を読み込んで画面を表示
     applySettings();
     render();
@@ -1022,6 +1030,11 @@ function clearHistory() {
 //  データのバックアップ
 // ========================================
 
+
+/* ========================================
+   データのバックアップ
+======================================== */
+
 // 保存データをJSONファイルとしてダウンロードする
 function exportData() {
     // データをJSON形式のファイルに変換する
@@ -1043,4 +1056,91 @@ function exportData() {
 
     // 使用した一時URLを解放する
     URL.revokeObjectURL(url);
+}
+
+// JSONファイルを読み込んでデータを復元する
+async function importData(event) {
+    const input = event.target;
+    const file = input.files[0];
+
+    // ファイルが選択されていなければ終了する
+    if (!file) return;
+
+    try {
+        // ファイルの内容を文字列として読み込む
+        const text = await file.text();
+
+        // JSON形式に変換する
+        const data = JSON.parse(text);
+
+        // バックアップの基本的な形式を確認する
+        const isObject = value =>
+            value !== null &&
+            typeof value === "object" &&
+            !Array.isArray(value);
+
+        const isValid =
+            isObject(data) &&
+            Array.isArray(data.employees) &&
+            isObject(data.requests) &&
+            isObject(data.shifts) &&
+            Array.isArray(data.holidays) &&
+            Array.isArray(data.history) &&
+            isObject(data.settings) &&
+            typeof data.settings.basicRequired === "number" &&
+            typeof data.settings.levelTarget === "number" &&
+            typeof data.settings.levelRequired === "number" &&
+            typeof data.settings.consecutiveEnabled === "boolean" &&
+            Array.isArray(data.settings.closedWeekdays) &&
+            typeof data.nextId === "number";
+
+        // 形式が違うファイルは読み込まない
+        if (!isValid) {
+            alert("このファイルはシフト管理アプリのバックアップではないか、データ形式が正しくありません。");
+            return;
+        }
+
+        // 現在のデータを上書きする前に確認する
+        const confirmed = confirm(
+            "バックアップを読み込むと、現在のデータが置き換わります。\n" +
+            "大切なデータは先に「データを書き出す」で保存してください。\n\n" +
+            "復元を実行しますか？"
+        );
+
+        // キャンセルされた場合は何も変更しない
+        if (!confirmed) return;
+
+        // 足りない設定項目には初期値を補う
+        const restoredData = {
+            ...empty(),
+            ...data,
+            settings: {
+                ...empty().settings,
+                ...data.settings
+            }
+        };
+
+        // 保存に成功した場合だけ、画面のデータを置き換える
+        try {
+            localStorage.setItem(KEY, JSON.stringify(restoredData));
+        } catch (error) {
+            alert("データを保存できませんでした。現在のデータは変更していません。");
+            return;
+        }
+
+        // 復元したデータをアプリに反映する
+        db = restoredData;
+
+        // 設定と画面を更新する
+        applySettings();
+        render();
+
+        alert("バックアップを復元しました！");
+    } catch (error) {
+        // JSONの読み込みや解析に失敗した場合
+        alert("ファイルを読み込めませんでした。正しいJSONファイルか確認してください。");
+    } finally {
+        // 同じファイルをもう一度選択できるようにする
+        input.value = "";
+    }
 }
