@@ -32,7 +32,17 @@
       <h1>月間シフト</h1>
       <p class="muted">スタッフの希望を確認しながら、シフトを作成・調整できます。</p>
     </div>
-    <button class="secondary" id="exportBtn">データを書き出す</button>
+    <div class="backup-actions">
+      <button class="secondary" id="exportBtn" type="button">
+        データを書き出す
+      </button>
+
+      <button class="secondary" id="importBtn" type="button">
+    バックアップを読み込む
+      </button>
+
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
   </div>
   
 <section class="card" id="calendar-section">
