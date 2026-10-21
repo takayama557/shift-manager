@@ -1,6 +1,8 @@
 # shift-manager
 シフト管理システム
 
+https://takayama557.github.io/shift-manager/
+
 【ファイル構成】
 Shift_GitHubPages/
 ├─ index.html
