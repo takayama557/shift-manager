@@ -3,12 +3,6 @@
 
 https://takayama557.github.io/shift-manager/
 
-【ファイル構成】
-Shift_GitHubPages/
-├─ index.html
-├─ css/ress.css
-├─ css/style.css
-└─ js/app.js
 
 【使い方】
 ・カレンダー
