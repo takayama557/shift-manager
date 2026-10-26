@@ -8,8 +8,8 @@
   <title>シフト管理システム</title>
 
   <!-- ファビコン -->
-  <link rel="icon" href="shift-work_icon.png" type="image/png">
-  
+  <link rel="icon" href="/shift-work_icon.png">
+
   <!-- CSS JSリンク -->
   <link rel="stylesheet" href="css/ress.css">
   <link rel="stylesheet" href="css/style.css">
@@ -17,7 +17,8 @@
   <!-- kiwi Maruフォント -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&family=Kiwi+Maru&family=Zen+Kurenaido&display=swap"
+  <link
+    href="https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&family=Kiwi+Maru&family=Zen+Kurenaido&display=swap"
     rel="stylesheet">
 
 </head>
@@ -55,7 +56,7 @@
         <input type="file" id="importFile" accept=".json,application/json" hidden>
       </div>
     </div>
-<!-- カレンダー シフト自動生成画面 -->
+    <!-- カレンダー シフト自動生成画面 -->
     <section class="card" id="calendar-section">
       <div class="calendar-toolbar">
         <div class="toolbar">
@@ -95,38 +96,94 @@
           <div class="form-row">
             <div>
               <label for="staffName">スタッフ名</label>
-              <input id="staffName" maxlength="40" placeholder="例：山田 花子" required>
+              <input id="staffName" maxlength="20" placeholder="例：前田 三平" required>
             </div>
             <div>
               <label for="staffLevel">レベル</label>
               <select id="staffLevel">
-                <option value="1">Lv1</option>
+                <option value=" 1">Lv1</option>
                 <option value="2">Lv2</option>
                 <option value="3">Lv3</option>
               </select>
             </div>
           </div>
+
+          <!-- 出勤時間：初期値は17:00 -->
+          <div class="form-row">
+            <div>
+              <label for="staffStartTime">出勤時間</label>
+              <input id="staffStartTime" type="time" value="17:00" required>
+              <!-- 曜日ごとの出勤時間変更 -->
+              <details class="weekday-time-settings">
+                <summary>曜日ごとの出勤時間を変更する場合ここをタップ</summary>
+                <p>変更しない曜日は、基本の出勤時間が適用されます。</p>
+                <div class="form-row">
+                  <div>
+                    <label for="startTimeMon">月曜日</label>
+                    <input id="startTimeMon" type="time">
+                  </div>
+                  <div>
+                    <label for="startTimeTue">火曜日</label>
+                    <input id="startTimeTue" type="time">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div>
+                    <label for="startTimeWed">水曜日</label>
+                    <input id="startTimeWed" type="time">
+                  </div>
+                  <div>
+                    <label for="startTimeThu">木曜日</label>
+                    <input id="startTimeThu" type="time">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div>
+                    <label for="startTimeFri">金曜日</label>
+                    <input id="startTimeFri" type="time">
+                  </div>
+                  <div>
+                    <label for="startTimeSat">土曜日</label>
+                    <input id="startTimeSat" type="time">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div>
+                    <label for="startTimeSun">日曜日</label>
+                    <input id="startTimeSun" type="time">
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+          <!-- 最大連勤日数 -->
           <div class="form-row">
             <div>
               <label for="staffMax">最大連勤日数</label>
               <select id="staffMax">
+                <option>1</option>
+                <option>2</option>
                 <option>3</option>
                 <option>4</option>
                 <option selected>5</option>
                 <option>6</option>
                 <option>7</option>
+                <option>31</option>
               </select>
             </div>
             <div>
+              <!-- アイコンカラー -->
               <label>アイコンカラー</label>
               <div id="colorChoices" class="color-list">
               </div>
             </div>
           </div>
+          <!-- 出勤曜日 -->
           <label>絶対に出勤できない曜日</label>
           <div id="unavailableChoices" class="weekday-list">
           </div>
           <div class="form-actions">
+            <!-- スタッフ追加 -->
             <button class="primary" id="staffSubmit">＋ スタッフ追加</button>
             <button class="secondary hidden" id="staffCancelEdit" type="button">編集をキャンセル</button>
           </div>
@@ -277,5 +334,6 @@
 </body>
 
 <script src="js/app.js" defer></script>
+<script type="module" src="js/firebase.js"></script>
 
 </html>
