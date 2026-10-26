@@ -538,3 +538,11 @@ footer{
     flex-direction:column
   }
 }
+/* カレンダーの出勤時間 */
+.shift-time {
+    font-size: 11.5px;
+    line-height: 1.2;
+    font-weight: normal;
+    margin-top: 2px;
+    color:#4d8c63
+}
