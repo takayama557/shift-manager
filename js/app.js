@@ -309,9 +309,26 @@ function saveEmployee(e) {
         name: $("staffName").value.trim(),
         level: +$("staffLevel").value,
         maxConsecutive: +$("staffMax").value,
+
+        // 出勤時間を保存する（未入力なら17:00）
+        startTime: $("staffStartTime").value || "17:00",
+        // 曜日ごとの出勤時間を保存する
+        // 空欄なら基本の出勤時間を使う
+        startTimeOverrides: {
+            mon: $("startTimeMon").value,
+            tue: $("startTimeTue").value,
+            wed: $("startTimeWed").value,
+            thu: $("startTimeThu").value,
+            fri: $("startTimeFri").value,
+            sat: $("startTimeSat").value,
+            sun: $("startTimeSun").value
+        },
+
+
         color,
         unavailableWeekdays: [...unavailable]
     };
+
 
     // 名前が空欄なら登録しない
     if (!data.name) return;
@@ -354,9 +371,25 @@ function editEmployee(id) {
     color = e.color;
     unavailable = [...(e.unavailableWeekdays || [])];
 
+    // スタッフ名を復元する
     $("staffName").value = e.name;
+    // スタッフレベルを復元
     $("staffLevel").value = e.level;
+    // 最大連勤日数を復元
     $("staffMax").value = e.maxConsecutive;
+    // 基本の出勤時間を復元する（未設定の場合は17:00）
+    $("staffStartTime").value = e.startTime || "17:00";
+    // 古いデータに曜日別設定がなくてもエラーにならないようにする
+    const times = e.startTimeOverrides || {};
+    // 曜日ごとの出勤時間を復元する
+    $("startTimeMon").value = times.mon || "";
+    $("startTimeTue").value = times.tue || "";
+    $("startTimeWed").value = times.wed || "";
+    $("startTimeThu").value = times.thu || "";
+    $("startTimeFri").value = times.fri || "";
+    $("startTimeSat").value = times.sat || "";
+    $("startTimeSun").value = times.sun || "";
+
 
     drawColors();
     drawWeekdays("unavailableChoices", unavailable, v => unavailable = v);
@@ -585,16 +618,24 @@ function drawCalendar() {
                 );
 
                 c.innerHTML = `
-                    <div class="day-number">${d}</div>
-                    <div class="confirmed-mark">${s.status === "work" ? "出" : "休"}</div>
-                    ${
-                        r && r.request_type !== "none"
-                            ? `<div class="preference-mark ${
-                                r.request_type === "work" ? "pref-work" : "pref-off"
-                            }">希望:${r.request_type === "work" ? "出" : "休"}</div>`
-                            : ""
-                    }
+                <div class="day-number">${d}</div>
+                <div class="confirmed-mark">${
+                    s.status === "work" ? "出" : "休"
+                }</div>
+                ${
+                    s.status === "work"
+                        ? `<div class="shift-time">${esc(e.startTime || "17:00")}</div>`
+                        : ""
+                }
+                ${
+                    r && r.request_type !== "none"
+                        ? `<div class="preference-mark ${
+                            r.request_type === "work" ? "pref-work" : "pref-off"
+                        }">希望:${r.request_type === "work" ? "出" : "休"}</div>`
+                        : ""
+                }
                 `;
+
 
                 // 確定シフトをクリックすると編集画面を開く
                 c.onclick = () => openShift(day, e.id);
@@ -927,6 +968,24 @@ function generate() {
                 `${day}: Lv${s.levelTarget}以上が不足（必要${s.levelRequired}人／配置${lc}人）`
             );
         }
+
+        // 17:00に出勤するスタッフが1人以上いるか確認する
+        const staffAt1700 = db.employees.filter(e => {
+            const shift = created[cellKey(day, e.id)];
+
+            return (
+                shift?.status === "work" &&
+                (e.startTime || "17:00") === "17:00"
+            );
+        }).length;
+
+        // 17:00の出勤人数が不足していたら警告する
+        if (staffAt1700 < 1) {
+            warnings.push(
+                `${day}: 始業時間に出勤するスタッフがいません`
+            );
+        }
+
     }
 
     // 生成期間内の既存シフトを削除する
