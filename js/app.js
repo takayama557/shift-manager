@@ -480,6 +480,10 @@ function applySettings() {
     $("levelRequired").value = s.levelRequired;
     $("consecutiveEnabled").checked = s.consecutiveEnabled;
 
+    // 始業時間と、その時間に必要な人数を画面に反映する
+    $("requiredStartTime").value = s.requiredStartTime || "17:00";
+    $("requiredStartCount").value = s.requiredStartCount ?? 1;
+
     closed = [...s.closedWeekdays];
 
     drawWeekdays("closedWeekdays", closed, v => closed = v);
@@ -492,13 +496,22 @@ function saveSettings() {
         levelTarget: +$("levelTarget").value,
         levelRequired: Math.max(0, +$("levelRequired").value || 0),
         consecutiveEnabled: $("consecutiveEnabled").checked,
-        closedWeekdays: [...closed]
+        closedWeekdays: [...closed],
+
+        // 始業時間と、その時間に必要な人数を保存する
+        requiredStartTime: $("requiredStartTime").value || "17:00",
+        requiredStartCount: Math.max(
+            0,
+            Math.min(100, Number($("requiredStartCount").value) || 0)
+        )
     };
 
+    // 保存して画面を更新する
     save();
     $("settingsMessage").textContent = "保存しました";
     render();
 }
+
 
 // 指定した日付を休業日に追加する
 function addHoliday() {
@@ -624,7 +637,7 @@ function drawCalendar() {
                 }</div>
                 ${
                     s.status === "work"
-                        ? `<div class="shift-time">${esc(e.startTime || "17:00")}</div>`
+                        ? `<div class="shift-time">${esc(s.startTime || e.startTime || "17:00")}</div>`
                         : ""
                 }
                 ${
@@ -698,6 +711,12 @@ function openRequest(day = keyDate(new Date()), id = null) {
     const r = req(day, requestTarget.id);
     $("reqType").value = r?.request_type || "work";
     $("reqComment").value = r?.comment || "";
+    // その日の出勤時間を表示する
+    const e = db.employees.find(x => x.id === requestTarget.id);
+    const s = shift(day, requestTarget.id);
+
+    $("reqStartTime").value =
+        s?.startTime || e?.startTime || "17:00";
 
     $("requestContext").textContent = `${day} の勤務希望`;
     $("requestModal").classList.add("show");
@@ -709,6 +728,8 @@ function saveRequest() {
     const id = +$("reqEmployee").value;
     const type = $("reqType").value;
     const comment = $("reqComment").value.trim();
+    // この日の出勤時間を取得する
+    const startTime = $("reqStartTime").value || "17:00";
 
     if (!day || !id) {
         return alert("日付とスタッフを選んでください");
@@ -716,16 +737,21 @@ function saveRequest() {
 
     const k = cellKey(day, id);
 
-    // 希望が未設定でコメントもなければデータを削除する
-    if (type === "none" && !comment) {
+    // 希望が未設定でも、出勤時間が基本時間と異なる場合は保存する
+    const e = db.employees.find(x => x.id === id);
+    const basicTime = e?.startTime || "17:00";
+
+    if (type === "none" && !comment && startTime === basicTime) {
         delete db.requests[k];
     } else {
+
         // 勤務希望とコメントを保存する
         db.requests[k] = {
             work_date: day,
             employee_id: id,
             request_type: type,
-            comment
+            comment,
+            startTime
         };
     }
 
@@ -734,42 +760,68 @@ function saveRequest() {
     render();
 }
 
-
 // ========================================
 //  確定シフトの編集・保存
 // ========================================
 
 // 確定シフトの編集画面を開く
 function openShift(day, id) {
+    // 編集する日付とスタッフを記録する
     shiftTarget = { day, id };
 
     const e = db.employees.find(x => x.id === id);
     const s = shift(day, id);
 
+    // 編集画面のタイトルを表示する
     $("shiftTitle").textContent = `${day} / ${e?.name || ""}`;
+
+    // 出勤・休みの設定を表示する
     $("shiftStatus").value = s.status;
+
+    // コメントを表示する
     $("shiftComment").value = s.comment || "";
 
+    // この日の勤務時間を表示する
+    // 個別設定がなければ、スタッフの基本出勤時間を使う
+    $("shiftStartTime").value =
+        s.startTime || e?.startTime || "17:00";
+
+    // 編集画面を開く
     $("shiftModal").classList.add("show");
 }
 
-// 編集した確定シフトを保存する
+
+ // 編集した確定シフトを保存する
 function saveShift() {
     if (!shiftTarget) return;
 
     const k = cellKey(shiftTarget.day, shiftTarget.id);
 
+    // スタッフの基本情報を取得する
+    const e = db.employees.find(
+        x => x.id === shiftTarget.id
+    );
+
+    // 現在のシフト情報を取得する
+    const currentShift = db.shifts[k] || {};
+
+    // 入力された勤務時間を取得する
+    const startTime = $("shiftStartTime").value || "17:00";
+
+    // その日・そのスタッフのシフトだけを保存する
     db.shifts[k] = {
-        ...db.shifts[k],
+        ...currentShift,
         status: $("shiftStatus").value,
+        startTime,
         comment: $("shiftComment").value.trim(),
-        manually_modified: true // 手動で変更したことを記録する
+        manually_modified: true
     };
 
     save();
     close("shiftModal");
     render();
 }
+
 
 // 指定したモーダル画面を閉じる
 function close(id) {
@@ -872,19 +924,24 @@ function generate() {
             (y.e.level - x.e.level) * 0.1
         );
 
-        // 必要人数分のスタッフを選ぶ
+        // 出勤希望のスタッフを先に選ぶ
+        // 出勤希望が必要人数を超える場合は、希望者全員を選ぶ
         const chosen = new Set(
-            candidates.slice(0, s.basicRequired).map(x => x.e.id)
+            candidates
+                .filter(x => x.r?.request_type === "work")
+                .map(x => x.e.id)
         );
 
-        // 出勤希望のスタッフを、可能な範囲で追加する
-        candidates
-            .filter(x => x.r?.request_type === "work")
-            .forEach(x => {
-                if (chosen.size < s.basicRequired || s.basicRequired === 0) {
-                    chosen.add(x.e.id);
-                }
-            });
+        // 出勤希望者だけで必要人数に達していない場合、
+        // 勤務回数が少ない人などを順番に追加する
+        for (const x of candidates) {
+            if (chosen.size >= s.basicRequired) {
+                break;
+            }
+
+            chosen.add(x.e.id);
+        }
+
 
         // 基準レベル以上のスタッフが不足していないか確認する
         let qualified = candidates.filter(
@@ -898,10 +955,16 @@ function generate() {
             ).length < s.levelRequired &&
             qualified.length
         ) {
-            // 選択済みの低レベルスタッフを探す
+
+            // 出勤希望を出していない低レベルスタッフを探す
+            // 出勤希望者はレベル条件の入れ替えで外さない
             const low = [...chosen]
                 .map(id => db.employees.find(e => e.id === id))
-                .find(e => e && e.level < s.levelTarget);
+                .find(e =>
+                    e &&
+                    e.level < s.levelTarget &&
+                    req(day, e.id)?.request_type !== "work"
+                );
 
             if (low) {
                 // 低レベルスタッフを外す
@@ -929,11 +992,14 @@ function generate() {
                 candidates.some(x => x.e.id === e.id);
 
             // 出勤または休みのシフトを作成する
+            const requestTime = r?.startTime || e.startTime || "17:00";
+
             created[cellKey(day, e.id)] = {
-                work_date: day,
-                employee_id: e.id,
-                status: work ? "work" : "off",
-                comment: r?.comment || ""
+            work_date: day,
+            employee_id: e.id,
+            status: work ? "work" : "off",
+            comment: r?.comment || "",
+            startTime: work ? requestTime : ""
             };
 
             if (work) {
@@ -983,6 +1049,36 @@ function generate() {
         if (staffAt1700 < 1) {
             warnings.push(
                 `${day}: 始業時間に出勤するスタッフがいません`
+            );
+        }
+
+        // 設定した始業時間に必要な人数がいるか確認する
+        const requiredTime = s.requiredStartTime || "17:00";
+        const requiredCount = Math.max(
+            0,
+            Number(s.requiredStartCount) || 0
+        );
+
+                // 設定した始業時間までに出勤するスタッフを数える
+        const actualCount = db.employees.filter(e => {
+            const shift = created[cellKey(day, e.id)];
+
+            // 休みのスタッフは数えない
+            if (shift?.status !== "work") {
+                return false;
+            }
+
+            // スタッフの実際の始業時間を取得する
+            const startTime = shift.startTime || e.startTime || "17:00";
+
+            // 設定時間より早い、または同じ時間なら人数に含める
+            return startTime <= requiredTime;
+        }).length;
+
+        // 設定時間までに必要人数が揃わなければ警告する
+        if (actualCount < requiredCount) {
+            warnings.push(
+                `${day}: ${requiredTime}までの出勤人数不足（必要${requiredCount}人／配置${actualCount}人）`
             );
         }
 
