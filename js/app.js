@@ -1,5 +1,14 @@
 
 "use strict";
+// Firebaseのログイン機能を読み込む
+import { auth } from "./firebase.js";
+
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
+import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
+import { signOut } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
 
 // ========================================
 //  基本設定
@@ -1294,3 +1303,69 @@ async function importData(event) {
         input.value = "";
     }
 }
+
+ // ログインフォームの処理
+const loginForm = $("loginForm");
+
+if (loginForm) {
+    loginForm.addEventListener("submit", async (event) => {
+        // フォーム送信によるページ再読み込みを防ぐ
+        event.preventDefault();
+
+        const email = $("loginEmail").value.trim();
+        const password = $("loginPassword").value;
+        const message = $("loginMessage");
+
+        message.textContent = "ログインしています…";
+
+        try {
+            // Firebaseでメールアドレスとパスワードを確認する
+            await signInWithEmailAndPassword(auth, email, password);
+            // ログイン画面を隠す
+            $("login-section").hidden = true;
+
+            // シフト管理画面を表示する
+            $("app-section").hidden = false;
+
+            message.textContent = "ログインしました。";
+        } catch (error) {
+            // 詳しいエラー情報は開発者ツールで確認できる
+            console.error("ログインエラー:", error);
+            message.textContent =
+                "ログインできませんでした。メールアドレスとパスワードを確認してください。";
+        }
+    });
+}
+
+ // Firebaseのログイン状態に応じて画面を切り替える
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        // ログイン済みならログイン画面を隠す
+        $("login-section").hidden = true;
+
+        // シフト管理画面を表示する
+        $("app-section").hidden = false;
+    } else {
+        // ログインしていなければシフト管理画面を隠す
+        $("app-section").hidden = true;
+
+        // ログイン画面を表示する
+        $("login-section").hidden = false;
+    }
+});
+
+ // ログアウトボタンの処理
+const logoutBtn = $("logoutBtn");
+
+if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+        try {
+            // Firebaseからログアウトする
+            await signOut(auth);
+        } catch (error) {
+            console.error("ログアウトエラー:", error);
+            alert("ログアウトできませんでした。もう一度お試しください。");
+        }
+    });
+}
+
