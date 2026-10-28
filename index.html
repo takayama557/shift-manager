@@ -40,9 +40,9 @@
   <main class="container">
     <div class="page-heading">
       <div>
-        <p class="eyebrow">SHIFT PLANNER</p>
+
         <h1>月間シフト</h1>
-        <p class="muted">スタッフの希望を確認しながら、シフトを作成・調整できます。</p>
+        <p class="muted">シフトを作成・調整できます。</p>
       </div>
       <div class="backup-actions">
         <button class="secondary" id="exportBtn" type="button">
@@ -224,6 +224,17 @@
             <label for="consecutiveEnabled">最大連勤日数を考慮する</label>
           </div>
         </div>
+        <div class="form-row">
+          <div>
+            <label for="requiredStartTime">始業時間</label>
+            <input type="time" id="requiredStartTime" value="17:00">
+          </div>
+          <div>
+            <label for="requiredStartCount">始業時間に必要な人数</label>
+            <input type="number" id="requiredStartCount" min="0" max="100" value="1">
+          </div>
+        </div>
+
         <label>毎週の定休日</label>
         <div id="closedWeekdays" class="weekday-list">
         </div>
@@ -273,6 +284,7 @@
       <p class="eyebrow">REQUEST</p>
       <h2>勤務希望</h2>
       <p id="requestContext" class="muted"></p>
+
       <div class="form-row">
         <div>
           <label for="reqDate">日付</label>
@@ -280,10 +292,10 @@
         </div>
         <div>
           <label for="reqEmployee">スタッフ</label>
-          <select id="reqEmployee">
-          </select>
+          <select id="reqEmployee"></select>
         </div>
       </div>
+
       <div class="form-row">
         <div>
           <label for="reqType">希望</label>
@@ -298,9 +310,17 @@
           <input id="reqComment" maxlength="120" placeholder="任意">
         </div>
       </div>
+
+      <div class="form-row">
+        <div>
+          <label for="reqStartTime">この日の出勤時間</label>
+          <input type="time" id="reqStartTime" value="17:00">
+        </div>
+      </div>
+
       <div class="modal-actions">
-        <button class="secondary" id="reqCancel">閉じる</button>
-        <button class="primary" id="reqSave">希望を保存</button>
+        <button type="button" class="secondary" id="reqCancel">閉じる</button>
+        <button type="button" class="primary" id="reqSave">希望を保存</button>
       </div>
     </div>
   </div>
@@ -314,17 +334,25 @@
       </p>
       <div class="form-row">
         <div>
-          <label for="shiftStatus">勤務状態</label>
-          <select id="shiftStatus">
-            <option value="work">出勤</option>
-            <option value="off">休み</option>
-          </select>
+        <label for="shiftStatus">勤務状態</label>
+        <select id="shiftStatus">
+          <option value="work">出勤</option>
+          <option value="off">休み</option>
+        </select>
         </div>
         <div>
-          <label for="shiftComment">コメント</label>
-          <input id="shiftComment" maxlength="120">
+          <label for="shiftStartTime">勤務時間</label>
+          <input id="shiftStartTime" type="time" value="17:00">
         </div>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label for="shiftComment">コメント</label>
+        <input id="shiftComment" maxlength="120">
       </div>
+    </div>
+
       <div class="modal-actions">
         <button class="secondary" id="shiftCancel">閉じる</button>
         <button class="primary" id="shiftSave">変更を保存</button>
