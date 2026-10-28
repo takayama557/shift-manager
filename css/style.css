@@ -262,7 +262,7 @@ button:hover{
   color:#8b93a4;
   line-height:1.1
 }
-.confirmed-work 
+.confirmed-work
 .confirmed-mark{
   color:#4f9b70
 }
@@ -538,6 +538,7 @@ footer{
     flex-direction:column
   }
 }
+
 /* カレンダーの出勤時間 */
 .shift-time {
     font-size: 11.5px;
