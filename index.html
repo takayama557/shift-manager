@@ -102,9 +102,9 @@
             <div>
               <label for="staffLevel">レベル</label>
               <select id="staffLevel">
-                <option value=" 1">Lv1</option>
-                <option value="2">Lv2</option>
-                <option value="3">Lv3</option>
+                <option value=" 1">初心者</option>
+                <option value="2">普通</option>
+                <option value="3">ベテラン</option>
               </select>
             </div>
           </div>
@@ -156,9 +156,8 @@
                 </div>
               </details>
             </div>
-          </div>
+
           <!-- 最大連勤日数 -->
-          <div class="form-row">
             <div>
               <label for="staffMax">最大連勤日数</label>
               <select id="staffMax">
@@ -169,20 +168,20 @@
                 <option selected>5</option>
                 <option>6</option>
                 <option>7</option>
-                <option>31</option>
               </select>
             </div>
+          </div>
+
+          <!-- アイコンカラー -->
+          <div class="form-row">
             <div>
-              <!-- アイコンカラー -->
               <label>アイコンカラー</label>
-              <div id="colorChoices" class="color-list">
-              </div>
+              <div id="colorChoices" class="color-list"></div>
             </div>
           </div>
           <!-- 出勤曜日 -->
           <label>絶対に出勤できない曜日</label>
-          <div id="unavailableChoices" class="weekday-list">
-          </div>
+          <div id="unavailableChoices" class="weekday-list"></div>
           <div class="form-actions">
             <!-- スタッフ追加 -->
             <button class="primary" id="staffSubmit">＋ スタッフ追加</button>
