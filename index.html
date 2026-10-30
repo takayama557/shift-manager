@@ -157,7 +157,7 @@
               </details>
             </div>
 
-          <!-- 最大連勤日数 -->
+            <!-- 最大連勤日数 -->
             <div>
               <label for="staffMax">最大連勤日数</label>
               <select id="staffMax">
@@ -205,13 +205,9 @@
             <label for="basicRequired">基本の必要人数</label>
             <input type="number" id="basicRequired" min="0" max="100" value="3">
           </div>
-          <div>
-            <label for="levelTarget">必要なレベル</label>
-            <select id="levelTarget">
-              <option value="1">Lv1以上</option>
-              <option value="2">Lv2以上</option>
-              <option value="3" selected>Lv3以上</option>
-            </select>
+          <div class="checkbox-field">
+            <input type="checkbox" id="consecutiveEnabled" checked>
+            <label for="consecutiveEnabled">最大連勤日数を考慮する</label>
           </div>
         </div>
         <div class="form-row">
@@ -219,9 +215,13 @@
             <label for="levelRequired">対象レベルの必要人数</label>
             <input type="number" id="levelRequired" min="0" max="100" value="1">
           </div>
-          <div class="checkbox-field">
-            <input type="checkbox" id="consecutiveEnabled" checked>
-            <label for="consecutiveEnabled">最大連勤日数を考慮する</label>
+          <div>
+            <label for="levelTarget">必要なレベル</label>
+            <select id="levelTarget">
+              <option value="1">Lv1以上</option>
+              <option value="2">Lv2以上</option>
+              <option value="3" selected>Lv3以上</option>
+            </select>
           </div>
         </div>
         <div class="form-row">
@@ -334,24 +334,24 @@
       </p>
       <div class="form-row">
         <div>
-        <label for="shiftStatus">勤務状態</label>
-        <select id="shiftStatus">
-          <option value="work">出勤</option>
-          <option value="off">休み</option>
-        </select>
+          <label for="shiftStatus">勤務状態</label>
+          <select id="shiftStatus">
+            <option value="work">出勤</option>
+            <option value="off">休み</option>
+          </select>
         </div>
         <div>
           <label for="shiftStartTime">勤務時間</label>
           <input id="shiftStartTime" type="time" value="17:00">
         </div>
-    </div>
-
-    <div class="form-row">
-      <div>
-        <label for="shiftComment">コメント</label>
-        <input id="shiftComment" maxlength="120">
       </div>
-    </div>
+
+      <div class="form-row">
+        <div>
+          <label for="shiftComment">コメント</label>
+          <input id="shiftComment" maxlength="120">
+        </div>
+      </div>
 
       <div class="modal-actions">
         <button class="secondary" id="shiftCancel">閉じる</button>
