@@ -142,7 +142,7 @@ function save() {
         alert("ブラウザに保存できませんでした。空き容量を確認してください。");
         return;
     }
-
+  }
 
 // HTMLに表示する文字列を安全な形式に変換する
 function esc(v) {
@@ -465,11 +465,6 @@ function editEmployee(id) {
 
 // スタッフを削除し、関連する勤務希望・シフトも削除する
 function deleteEmployee(id) {
-    // スタッフ削除は関連するシフトにも影響するため管理者だけに許可する
-    if (currentUserRole !== "admin") {
-        alert("スタッフの削除は管理者のみ可能です。");
-        return;
-    }
 
     const e = db.employees.find(x => x.id === id);
 
@@ -518,7 +513,7 @@ function drawEmployees() {
             </div>
             <div class="row-actions">
                 <button class="secondary" data-edit="${e.id}">編集</button>
-                ${currentUserRole === "admin" ? `<button class="danger" data-del="${e.id}">削除</button>` : ""}
+                <button class="danger" data-del="${e.id}">削除</button>
             </div>
         </div>`
     ).join("");
@@ -1310,10 +1305,21 @@ function drawHistory() {
 }
 
 // 確認後に自動生成の履歴を削除する
+function clearHistory() {
 
-    if (db.history.length && confirm("生成履歴を削除しますか？")) {
+    // 履歴が存在しない場合は終了する
+    if (!db.history.length) return;
+
+    // 削除してよいか確認する
+    if (confirm("生成履歴を削除しますか？")) {
+
+        // 履歴を空にする
         db.history = [];
+
+        // データを保存する
         save();
+
+        // 履歴の表示を更新する
         drawHistory();
     }
 }
@@ -1435,5 +1441,3 @@ async function importData(event) {
         input.value = "";
     }
 }
-
-
