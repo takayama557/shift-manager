@@ -1,13 +1,10 @@
 
-"use strict";
-
-console.log("app.js 読み込み確認");
+console.log("shift manager 読み込み完了");
 
 // ========================================
-//  基本設定
+// 基本設定
 // ========================================
 
-// スタッフのアイコンに使用する色
 const COLORS = [
     { name: "pink", value: "#FFD6E0" },
     { name: "peach", value: "#FFE0C2" },
@@ -21,130 +18,133 @@ const COLORS = [
     { name: "beige", value: "#F3DFD0" }
 ];
 
-// 曜日の表示に使用する文字
 const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
-
-// ブラウザにデータを保存するときのキー
 const KEY = "shiftManagerGithubPages_v1";
 
-// HTMLのidから要素を取得する
 const $ = id => document.getElementById(id);
-
-// 数字を2桁にそろえる（例：3 → "03"）
 const pad = n => String(n).padStart(2, "0");
 
-// 日付を「年-月-日」の形式に変換する
 const keyDate = d =>
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-// 「年-月-日」の文字列をDate型に変換する
 const parseDate = s => {
     const [y, m, d] = s.split("-").map(Number);
     return new Date(y, m - 1, d);
 };
 
-// 日付とスタッフIDを組み合わせた保存キーを作る
 const cellKey = (d, id) => `${d}|${id}`;
 
-
-// ========================================
-//  初期データの作成
-// ========================================
-
-// 保存データがない場合に使用する初期データ
 const empty = () => ({
-    employees: [],   // スタッフ一覧
-    requests: {},    // スタッフの勤務希望
-    shifts: {},      // 確定したシフト
-    holidays: [],    // 指定した休業日
-    history: [],     // 自動生成の履歴
-
-    // シフト作成に使用する設定
+    employees: [],
+    requests: {},
+    shifts: {},
+    holidays: [],
+    history: [],
     settings: {
-        basicRequired: 3,         // 1日に必要な基本人数
-        levelTarget: 3,           // 必要なレベルの基準
-        levelRequired: 1,         // 基準レベル以上の必要人数
-        consecutiveEnabled: true, // 連勤制限を使用するか
-        closedWeekdays: []        // 毎週の定休日
+        basicRequired: 3,
+        levelTarget: 3,
+        levelRequired: 1,
+        consecutiveEnabled: true,
+        closedWeekdays: [],
+        requiredStartTime: "17:00",
+        requiredStartCount: 1
     },
-
-    nextId: 1 // 次に使用するスタッフID
+    nextId: 1
 });
 
-
 // ========================================
-//  データの読み込みと保存
+// LocalStorage 読み込み
 // ========================================
 
-// ブラウザに保存されたデータを読み込む
 function load() {
     try {
-        const x = JSON.parse(localStorage.getItem(KEY));
+        const raw = localStorage.getItem(KEY);
 
-        // 必要なデータが存在する場合は読み込む
-        if (x && x.employees && x.settings) {
-            return { ...empty(), ...x };
+        if (!raw) return empty();
+
+        const x = JSON.parse(raw);
+
+        if (
+            !x ||
+            typeof x !== "object" ||
+            Array.isArray(x) ||
+            !Array.isArray(x.employees)
+        ) {
+            throw new Error("保存データの形式が正しくありません");
         }
-    } catch (e) {
-        // 読み込みに失敗した場合は初期データを使用する
-    }
 
-    return empty();
+        const defaults = empty();
+
+        const employees = x.employees.map(e => ({
+            startTime: "17:00",
+            startTimeOverrides: {},
+            maxConsecutive: 5,
+            unavailableWeekdays: [],
+            color: COLORS[0].name,
+            ...e
+        }));
+
+        const maxId = employees.reduce(
+            (max, e) => Math.max(max, Number(e.id) || 0),
+            0
+        );
+
+        return {
+            ...defaults,
+            ...x,
+            employees,
+            requests: x.requests && typeof x.requests === "object"
+                ? x.requests : {},
+            shifts: x.shifts && typeof x.shifts === "object"
+                ? x.shifts : {},
+            holidays: Array.isArray(x.holidays) ? x.holidays : [],
+            history: Array.isArray(x.history) ? x.history : [],
+            settings: {
+                ...defaults.settings,
+                ...(x.settings || {})
+            },
+            nextId: Math.max(Number(x.nextId) || 1, maxId + 1)
+        };
+
+    } catch (e) {
+        console.error("保存データ読み込みエラー:", e);
+
+        alert(
+            "保存データを正常に読み込めませんでした。\n" +
+            "既存データを消さずに、バックアップからの復元を確認してください。"
+        );
+
+        return empty();
+    }
 }
 
-// アプリ全体で使用するデータ
 let db = load();
 
-// ログインユーザーの権限（admin または user）
-let currentUserRole = null;
+// ========================================
+// LocalStorage 保存
+// ========================================
 
-// Firestoreからの読み込みが終わり、共有保存を開始してよいかを表す
-let cloudReady = false;
-
-// 複数の保存が同時に走ってデータが前後しないよう、順番に実行する
-let cloudSaveQueue = Promise.resolve();
-
-// 保存エラーの警告を何度も表示しないためのフラグ
-let cloudErrorShown = false;
-
-// 管理者専用の機能を表示・非表示にする
-function updateRoleDisplay() {
-    // 管理者かどうかを確認する
-    const isAdmin = currentUserRole === "admin";
-
-    // 管理者専用の要素をすべて取得する
-    document.querySelectorAll(".admin-only").forEach((element) => {
-        // 管理者には表示し、一般利用者には非表示にする
-        element.hidden = !isAdmin;
-    });
-}
-
-// 現在表示している月
-let month = new Date();
-
-// 編集中のスタッフID
-let editId = null;
-
-// 選択中のスタッフカラーと曜日
-let color = COLORS[0].name;
-let unavailable = [];
-let closed = [];
-
-// 編集対象の勤務希望・シフト
-let requestTarget = null;
-let shiftTarget = null;
-
-// データをブラウザに保存
 function save() {
     try {
         localStorage.setItem(KEY, JSON.stringify(db));
-    } catch (e) {
-        alert("ブラウザに保存できませんでした。空き容量を確認してください。");
-        return;
-    }
-  }
+        return true;
 
-// HTMLに表示する文字列を安全な形式に変換する
+    } catch (e) {
+        console.error("保存エラー:", e);
+
+        alert(
+            "データを保存できませんでした。\n" +
+            "ブラウザの保存容量を確認してください。"
+        );
+
+        return false;
+    }
+}
+
+// ========================================
+// 共通処理
+// ========================================
+
 function esc(v) {
     return String(v ?? "").replace(/[&<>"']/g, c => ({
         "&": "&amp;",
@@ -155,140 +155,117 @@ function esc(v) {
     }[c]));
 }
 
-// 色の名前からカラーコードを取得する
 function colorVal(n) {
     return COLORS.find(c => c.name === n)?.value || COLORS[0].value;
 }
 
-// 表示月の1日を取得する
 function first() {
     return new Date(month.getFullYear(), month.getMonth(), 1);
 }
 
-// 表示月の最終日を取得する
 function last() {
     return new Date(month.getFullYear(), month.getMonth() + 1, 0);
 }
 
-// 指定した日付・スタッフの勤務希望を取得する
 function req(d, id) {
     return db.requests[cellKey(d, id)];
 }
 
-// 指定した日付・スタッフの確定シフトを取得する
 function shift(d, id) {
     return db.shifts[cellKey(d, id)];
 }
-// ========================================
-// 曜日に応じた出勤時間を取得する
-// ========================================
 
-// 指定したスタッフ・日付の出勤時間を取得する
 function getEmployeeStartTime(employee, day) {
-
-    // 日付から曜日を取得する（日曜日=0、月曜日=1 ...）
     const weekday = parseDate(day).getDay();
 
-    // JavaScriptの曜日番号と保存しているキーを対応させる
     const weekdayKeys = [
-        "sun", // 日曜日
-        "mon", // 月曜日
-        "tue", // 火曜日
-        "wed", // 水曜日
-        "thu", // 木曜日
-        "fri", // 金曜日
-        "sat"  // 土曜日
+        "sun", "mon", "tue", "wed", "thu", "fri", "sat"
     ];
 
-    // その曜日に設定された出勤時間を取得する
-    const weekdayTime =
-        employee.startTimeOverrides?.[weekdayKeys[weekday]];
-
-    // 曜日別の時間があればそれを使う
-    // なければ基本の出勤時間を使う
-    return weekdayTime || employee.startTime || "17:00";
+    return employee.startTimeOverrides?.[weekdayKeys[weekday]]
+        || employee.startTime
+        || "17:00";
 }
 
-
 // ========================================
-//  アプリの初期化
+// 初期化
 // ========================================
 
-// HTMLの読み込み完了後に初期化処理を実行する
+let month = new Date();
+let editId = null;
+let color = COLORS[0].name;
+let unavailable = [];
+let closed = [];
+let requestTarget = null;
+let shiftTarget = null;
+
 document.addEventListener("DOMContentLoaded", init);
 
-// ボタンの動作を登録し、初期画面を表示する
 function init() {
-    // スタッフカラーの選択肢を表示
     drawColors();
 
-    // スタッフの出勤できない曜日を設定
-    drawWeekdays("unavailableChoices", unavailable, v => unavailable = v);
+    drawWeekdays(
+        "unavailableChoices",
+        unavailable,
+        v => unavailable = v
+    );
 
-    // 毎週の定休日を設定
-    drawWeekdays("closedWeekdays", closed, v => closed = v);
+    drawWeekdays(
+        "closedWeekdays",
+        closed,
+        v => closed = v
+    );
 
-    // 自動生成期間の初期値を表示月に合わせる
     $("generationStart").value = keyDate(first());
     $("generationEnd").value = keyDate(last());
-
-    // 指定休業日の初期値を今日にする
     $("holidayDate").value = keyDate(new Date());
 
-    // 月移動ボタン
     $("prevMonth").onclick = () => moveMonth(-1);
     $("nextMonth").onclick = () => moveMonth(1);
 
-    // 今月のカレンダーに戻る
     $("todayMonth").onclick = () => {
         month = new Date();
+        updateGenerationDates();
         render();
     };
 
-    // 各フォーム・ボタンの動作を登録
     $("staffForm").onsubmit = saveEmployee;
     $("staffCancelEdit").onclick = resetForm;
     $("saveSettings").onclick = saveSettings;
     $("addHoliday").onclick = addHoliday;
     $("generateBtn").onclick = generate;
 
-    // 勤務希望の操作
     $("reqCancel").onclick = () => close("requestModal");
     $("reqSave").onclick = saveRequest;
 
-    // 確定シフトの操作
     $("shiftCancel").onclick = () => close("shiftModal");
     $("shiftSave").onclick = saveShift;
 
-    // 履歴削除とバックアップ
     $("clearHistory").onclick = clearHistory;
     $("exportBtn").onclick = exportData;
-
-    // バックアップ読み込みボタンを押すと、ファイル選択画面を開く
-    $("importBtn").onclick = () => {
-    $("importFile").click();
-    };
-
-    // 選択したファイルを読み込む
+    $("importBtn").onclick = () => $("importFile").click();
     $("importFile").onchange = importData;
 
-    // 保存済みの設定を読み込んで画面を表示
     applySettings();
     render();
 }
 
-// 表示月を前後に移動する
-function moveMonth(n) {
-    month = new Date(month.getFullYear(), month.getMonth() + n, 1);
-
-    // 自動生成期間も表示月に合わせる
+function updateGenerationDates() {
     $("generationStart").value = keyDate(first());
     $("generationEnd").value = keyDate(last());
+}
 
+function moveMonth(n) {
+    month = new Date(
+        month.getFullYear(),
+        month.getMonth() + n,
+        1
+    );
+
+    updateGenerationDates();
     render();
 }
 
-// カレンダー・スタッフ・休業日・履歴を再表示する
 function render() {
     drawCalendar();
     drawEmployees();
@@ -296,12 +273,10 @@ function render() {
     drawHistory();
 }
 
-
 // ========================================
-// スタッフカラーと曜日の設定
+// カラー・曜日選択
 // ========================================
 
-// スタッフのアイコンカラーを表示する
 function drawColors() {
     $("colorChoices").innerHTML = COLORS.map(c =>
         `<button type="button"
@@ -312,7 +287,6 @@ function drawColors() {
             aria-label="${c.name}"></button>`
     ).join("");
 
-    // 色をクリックしたら選択状態を更新する
     $("colorChoices").querySelectorAll("button").forEach(b => {
         b.onclick = () => {
             color = b.dataset.c;
@@ -321,7 +295,6 @@ function drawColors() {
     });
 }
 
-// 曜日を選択するボタンを表示する
 function drawWeekdays(id, values, changed) {
     const root = $(id);
 
@@ -331,25 +304,19 @@ function drawWeekdays(id, values, changed) {
             data-d="${i}">${d}</button>`
     ).join("");
 
-    // 曜日ボタンをクリックしたときの処理
-root.querySelectorAll("button").forEach(b => {
-    b.onclick = () => {
-        // 定休日の設定は管理者だけが変更できる
-        if (id === "closedWeekdays" && currentUserRole !== "admin") {
-            alert("定休日の変更は管理者のみ可能です。");
-            return;
-        }
+    root.querySelectorAll("button").forEach(b => {
+        b.onclick = () => {
+            const n = Number(b.dataset.d);
 
-        const n = +b.dataset.d;
-
-            // 選択済みなら解除、未選択なら追加する
             values = values.includes(n)
                 ? values.filter(x => x !== n)
                 : [...values, n].sort();
 
-            // 選択状態を画面に反映する
             root.querySelectorAll("button").forEach(x => {
-                x.classList.toggle("selected", values.includes(+x.dataset.d));
+                x.classList.toggle(
+                    "selected",
+                    values.includes(Number(x.dataset.d))
+                );
             });
 
             changed(values);
@@ -357,25 +324,19 @@ root.querySelectorAll("button").forEach(b => {
     });
 }
 
-
 // ========================================
-//  スタッフの登録・編集・削除
+// スタッフ登録・編集
 // ========================================
 
-// スタッフを新規登録、または編集内容を保存する
 function saveEmployee(e) {
     e.preventDefault();
 
-    // 入力フォームからスタッフ情報を取得する
     const data = {
         name: $("staffName").value.trim(),
-        level: +$("staffLevel").value,
-        maxConsecutive: +$("staffMax").value,
-
-        // 出勤時間を保存する（未入力なら17:00）
+        level: Number($("staffLevel").value),
+        maxConsecutive: Number($("staffMax").value),
         startTime: $("staffStartTime").value || "17:00",
-        // 曜日ごとの出勤時間を保存する
-        // 空欄なら基本の出勤時間を使う
+
         startTimeOverrides: {
             mon: $("startTimeMon").value,
             tue: $("startTimeTue").value,
@@ -386,30 +347,31 @@ function saveEmployee(e) {
             sun: $("startTimeSun").value
         },
 
-
         color,
         unavailableWeekdays: [...unavailable]
     };
 
-
-    // 名前が空欄なら登録しない
     if (!data.name) return;
 
     if (editId !== null) {
-        // 編集中の場合は既存データを更新する
         const old = db.employees.find(x => x.id === editId);
-        if (old) Object.assign(old, data);
+        if (!old) return;
+
+        Object.assign(old, data);
+
     } else {
-        // 新規登録の場合はIDを付けて追加する
-        db.employees.push({ id: db.nextId++, ...data });
+        db.employees.push({
+            id: db.nextId++,
+            ...data
+        });
     }
 
-    save();
+    if (!save()) return;
+
     resetForm();
     render();
 }
 
-// 入力フォームを初期状態に戻す
 function resetForm() {
     $("staffForm").reset();
 
@@ -418,32 +380,32 @@ function resetForm() {
     unavailable = [];
 
     drawColors();
-    drawWeekdays("unavailableChoices", unavailable, v => unavailable = v);
+
+    drawWeekdays(
+        "unavailableChoices",
+        unavailable,
+        v => unavailable = v
+    );
 
     $("staffSubmit").textContent = "＋ スタッフ追加";
     $("staffCancelEdit").classList.add("hidden");
 }
 
-// 選択したスタッフの情報を編集フォームに表示する
 function editEmployee(id) {
     const e = db.employees.find(x => x.id === id);
     if (!e) return;
 
     editId = id;
-    color = e.color;
+    color = e.color || COLORS[0].name;
     unavailable = [...(e.unavailableWeekdays || [])];
 
-    // スタッフ名を復元する
     $("staffName").value = e.name;
-    // スタッフレベルを復元
-    $("staffLevel").value = e.level;
-    // 最大連勤日数を復元
-    $("staffMax").value = e.maxConsecutive;
-    // 基本の出勤時間を復元する（未設定の場合は17:00）
+    $("staffLevel").value = String(e.level);
+    $("staffMax").value = e.maxConsecutive || 5;
     $("staffStartTime").value = e.startTime || "17:00";
-    // 古いデータに曜日別設定がなくてもエラーにならないようにする
+
     const times = e.startTimeOverrides || {};
-    // 曜日ごとの出勤時間を復元する
+
     $("startTimeMon").value = times.mon || "";
     $("startTimeTue").value = times.tue || "";
     $("startTimeWed").value = times.wed || "";
@@ -452,89 +414,90 @@ function editEmployee(id) {
     $("startTimeSat").value = times.sat || "";
     $("startTimeSun").value = times.sun || "";
 
-
     drawColors();
-    drawWeekdays("unavailableChoices", unavailable, v => unavailable = v);
+
+    drawWeekdays(
+        "unavailableChoices",
+        unavailable,
+        v => unavailable = v
+    );
 
     $("staffSubmit").textContent = "変更を保存";
     $("staffCancelEdit").classList.remove("hidden");
 
-    // 編集フォームが見える位置まで画面を移動する
-    $("staffForm").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("staffForm").scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
 }
 
-// スタッフを削除し、関連する勤務希望・シフトも削除する
 function deleteEmployee(id) {
-
     const e = db.employees.find(x => x.id === id);
 
     if (!e || !confirm(
-        `${e.name}さんを削除しますか？関連する希望とシフトも削除されます。`
+        `${e.name}さんを削除しますか？\n関連する勤務希望とシフトも削除されます。`
     )) return;
 
-    // スタッフ一覧から削除する
+    const old = JSON.stringify(db);
+
     db.employees = db.employees.filter(x => x.id !== id);
 
-    // 対象スタッフの勤務希望とシフトを削除する
     [db.requests, db.shifts].forEach(obj => {
         Object.keys(obj).forEach(k => {
             if (k.endsWith("|" + id)) delete obj[k];
         });
     });
 
-    save();
+    if (!save()) {
+        db = JSON.parse(old);
+        return;
+    }
 
-    // 編集中のスタッフを削除した場合はフォームをリセット
     if (editId === id) resetForm();
 
     render();
 }
 
-// スタッフ一覧を画面に表示する
 function drawEmployees() {
     $("staffCount").textContent = `${db.employees.length}人`;
 
-    // スタッフがいない場合の表示
     if (!db.employees.length) {
         $("staffList").innerHTML =
             '<div class="empty-state">スタッフを追加すると、ここに一覧が表示されます。</div>';
         return;
     }
 
-    // スタッフ名・レベル・最大連勤日数・操作ボタンを表示する
     $("staffList").innerHTML = db.employees.map(e =>
         `<div class="staff-row">
             <div class="staff-info">
                 <span class="color-dot" style="background:${colorVal(e.color)}"></span>
                 <div>
                     <div class="staff-name">${esc(e.name)}</div>
-                    <div class="staff-meta">Lv${e.level} ・ 最大連勤${e.maxConsecutive}日</div>
+                    <div class="staff-meta">
+                        Lv${e.level} ・ 最大連勤${e.maxConsecutive}日
+                    </div>
                 </div>
             </div>
             <div class="row-actions">
-                <button class="secondary" data-edit="${e.id}">編集</button>
-                <button class="danger" data-del="${e.id}">削除</button>
+                <button type="button" class="secondary" data-edit="${e.id}">編集</button>
+                <button type="button" class="danger" data-del="${e.id}">削除</button>
             </div>
         </div>`
     ).join("");
 
-    // 編集ボタンに処理を登録する
     $("staffList").querySelectorAll("[data-edit]").forEach(b => {
-        b.onclick = () => editEmployee(+b.dataset.edit);
+        b.onclick = () => editEmployee(Number(b.dataset.edit));
     });
 
-    // 削除ボタンに処理を登録する
     $("staffList").querySelectorAll("[data-del]").forEach(b => {
-        b.onclick = () => deleteEmployee(+b.dataset.del);
+        b.onclick = () => deleteEmployee(Number(b.dataset.del));
     });
 }
 
-
 // ========================================
-//  定休日・必要人数などの設定
+// 生成条件
 // ========================================
 
-// 保存されている設定をフォームに反映する
 function applySettings() {
     const s = db.settings;
 
@@ -543,106 +506,126 @@ function applySettings() {
     $("levelRequired").value = s.levelRequired;
     $("consecutiveEnabled").checked = s.consecutiveEnabled;
 
-    // 始業時間と、その時間に必要な人数を画面に反映する
-    $("requiredStartTime").value = s.requiredStartTime || "17:00";
-    $("requiredStartCount").value = s.requiredStartCount ?? 1;
+    $("requiredStartTime").value =
+        s.requiredStartTime || "17:00";
 
-    closed = [...s.closedWeekdays];
+    $("requiredStartCount").value =
+        s.requiredStartCount ?? 1;
 
-    drawWeekdays("closedWeekdays", closed, v => closed = v);
+    closed = [...(s.closedWeekdays || [])];
+
+    drawWeekdays(
+        "closedWeekdays",
+        closed,
+        v => closed = v
+    );
 }
 
-// 設定フォームの内容を保存する
 function saveSettings() {
-    // 管理者以外はシフト生成条件を保存できないようにする
-    if (currentUserRole !== "admin") {
-        alert("シフト生成条件の変更は管理者のみ可能です。");
-        return;
-    }
+    const old = JSON.stringify(db.settings);
+
     db.settings = {
-        basicRequired: Math.max(0, +$("basicRequired").value || 0),
-        levelTarget: +$("levelTarget").value,
-        levelRequired: Math.max(0, +$("levelRequired").value || 0),
+        basicRequired: Math.max(
+            0, Math.min(100, Number($("basicRequired").value) || 0)
+        ),
+
+        levelTarget: Number($("levelTarget").value),
+
+        levelRequired: Math.max(
+            0, Math.min(100, Number($("levelRequired").value) || 0)
+        ),
+
         consecutiveEnabled: $("consecutiveEnabled").checked,
+
         closedWeekdays: [...closed],
 
-        // 始業時間と、その時間に必要な人数を保存する
-        requiredStartTime: $("requiredStartTime").value || "17:00",
+        requiredStartTime:
+            $("requiredStartTime").value || "17:00",
+
         requiredStartCount: Math.max(
             0,
             Math.min(100, Number($("requiredStartCount").value) || 0)
         )
     };
 
-    // 保存して画面を更新する
-    save();
+    if (!save()) {
+        db.settings = JSON.parse(old);
+        applySettings();
+        return;
+    }
+
     $("settingsMessage").textContent = "保存しました";
     render();
 }
 
+// ========================================
+// 指定休業日
+// ========================================
 
-// 指定した日付を休業日に追加する
 function addHoliday() {
-    // 管理者以外は休業日を追加できないようにする
-    if (currentUserRole !== "admin") {
-        alert("休業日の変更は管理者のみ可能です。");
-        return;
-    }
-
     const d = $("holidayDate").value;
 
     if (!d) return alert("日付を選択してください");
 
-    // 同じ日付が登録されていない場合だけ追加する
-    if (!db.holidays.includes(d)) db.holidays.push(d);
+    if (db.holidays.includes(d)) {
+        return alert("この休業日は登録済みです");
+    }
 
+    db.holidays.push(d);
     db.holidays.sort();
-    save();
+
+    if (!save()) {
+        db.holidays = db.holidays.filter(x => x !== d);
+        return;
+    }
+
     drawHolidays();
 }
 
-// 指定休業日の一覧を表示する
 function drawHolidays() {
     $("holidayList").innerHTML = db.holidays.length
         ? db.holidays.map(d =>
             `<span class="holiday-chip">${esc(d)}
-                <button data-holiday="${d}" aria-label="削除">×</button>
+                <button type="button"
+                    data-holiday="${esc(d)}"
+                    aria-label="削除">×</button>
             </span>`
         ).join("")
         : '<span class="muted">指定休業日はありません。</span>';
 
-    // 削除ボタンを押した休業日を一覧から削除する
     $("holidayList").querySelectorAll("[data-holiday]").forEach(b => {
         b.onclick = () => {
-            // 休業日の削除は管理者だけが実行できる
-            if (currentUserRole !== "admin") {
-                alert("休業日の変更は管理者のみ可能です。");
+            const d = b.dataset.holiday;
+
+            if (!confirm(`${d}を休業日から削除しますか？`)) return;
+
+            const old = [...db.holidays];
+            db.holidays = db.holidays.filter(x => x !== d);
+
+            if (!save()) {
+                db.holidays = old;
                 return;
             }
-            db.holidays = db.holidays.filter(d => d !== b.dataset.holiday);
-            save();
+
             drawHolidays();
+            render();
         };
     });
 }
 
-
 // ========================================
-//  カレンダーの表示
+// カレンダー
 // ========================================
 
-// 表示月のスタッフ別カレンダーを作成する
 function drawCalendar() {
     const root = $("calendar");
     root.innerHTML = "";
 
-    // カレンダーのタイトルを更新する
     $("monthTitle").textContent =
         `${month.getFullYear()}年${month.getMonth() + 1}月`;
 
     const days = last().getDate();
 
-    // 日付の見出しを作成する
     let h = '<div class="calendar-head">スタッフ</div>';
 
     for (let d = 1; d <= 31; d++) {
@@ -661,23 +644,23 @@ function drawCalendar() {
 
     root.innerHTML = h;
 
-    // スタッフごとに1行ずつカレンダーを作る
     db.employees.forEach(e => {
         const name = document.createElement("div");
+
         name.className = "employee-name";
+
         name.innerHTML = `
             <span class="color-dot" style="background:${colorVal(e.color)}"></span>
             <span class="employee-label">${esc(e.name)}</span>
             <small>Lv${e.level}</small>
         `;
+
         root.appendChild(name);
 
-        // 1日から31日までのセルを作る
         for (let d = 1; d <= 31; d++) {
             const c = document.createElement("div");
             c.className = "day-cell";
 
-            // その月に存在しない日付は空欄にする
             if (d > days) {
                 root.appendChild(c);
                 continue;
@@ -688,76 +671,80 @@ function drawCalendar() {
             const r = req(day, e.id);
             const s = shift(day, e.id);
 
-            // 定休日かどうかを判定する
             const isClosed =
-                closed.includes(dt.getDay()) || db.holidays.includes(day);
+                closed.includes(dt.getDay()) ||
+                db.holidays.includes(day);
 
-            // スタッフが出勤できない曜日かを判定する
-            const isNG = (e.unavailableWeekdays || []).includes(dt.getDay());
+            const isNG =
+                (e.unavailableWeekdays || []).includes(dt.getDay());
 
             if (isClosed) {
-                // 定休日は「休」と表示する
                 c.classList.add("closed");
+
                 c.innerHTML = `
                     <div class="day-number">${d}</div>
                     <div class="confirmed-mark">休</div>
                     <div class="preference-mark">定休日</div>
                 `;
+
             } else if (s) {
-                // 確定シフトがある場合は出勤・休みを表示する
                 c.classList.add(
-                    s.status === "work" ? "confirmed-work" : "confirmed-off"
+                    s.status === "work"
+                        ? "confirmed-work"
+                        : "confirmed-off"
                 );
 
                 c.innerHTML = `
-                <div class="day-number">${d}</div>
-                <div class="confirmed-mark">${
-                    s.status === "work" ? "出" : "休"
-                }</div>
-                ${
-                    s.status === "work"
-                        ? `<div class="shift-time">${esc(s.startTime || e.startTime || "17:00")}</div>`
-                        : ""
-                }
-                ${
-                    r && r.request_type !== "none"
-                        ? `<div class="preference-mark ${
-                            r.request_type === "work" ? "pref-work" : "pref-off"
-                        }">希望:${r.request_type === "work" ? "出" : "休"}</div>`
-                        : ""
-                }
+                    <div class="day-number">${d}</div>
+                    <div class="confirmed-mark">
+                        ${s.status === "work" ? "出" : "休"}
+                    </div>
+
+                    ${
+                        s.status === "work"
+                            ? `<div class="shift-time">${esc(
+                                s.startTime || getEmployeeStartTime(e, day)
+                            )}</div>`
+                            : ""
+                    }
+
+                    ${
+                        r && r.request_type !== "none"
+                            ? `<div class="preference-mark ${
+                                r.request_type === "work"
+                                    ? "pref-work" : "pref-off"
+                            }">
+                                希望:${r.request_type === "work" ? "出" : "休"}
+                            </div>`
+                            : ""
+                    }
                 `;
 
+                c.onclick = () => openShift(day, e.id);
 
-                // 管理者は確定シフトを編集し、一般利用者は勤務希望を編集する
-                c.onclick = () => {
-                    if (currentUserRole === "admin") {
-                        openShift(day, e.id);
-                    } else {
-                        openRequest(day, e.id);
-                    }
-                };
             } else if (isNG) {
-                // 出勤できない曜日はNGと表示する
                 c.classList.add("unavailable");
+
                 c.innerHTML = `
                     <div class="day-number">${d}</div>
                     <div class="confirmed-mark">NG</div>
                 `;
+
             } else {
-                // 未確定の日は勤務希望を表示する
                 c.innerHTML = `
                     <div class="day-number">${d}</div>
                     ${
                         r && r.request_type !== "none"
                             ? `<div class="preference-mark ${
-                                r.request_type === "work" ? "pref-work" : "pref-off"
-                            }">${r.request_type === "work" ? "出勤希望" : "休み希望"}</div>`
+                                r.request_type === "work"
+                                    ? "pref-work" : "pref-off"
+                            }">
+                                ${r.request_type === "work" ? "出勤希望" : "休み希望"}
+                            </div>`
                             : '<div class="muted">＋ 希望</div>'
                     }
                 `;
 
-                // セルをクリックすると勤務希望を入力できる
                 c.onclick = () => openRequest(day, e.id);
             }
 
@@ -766,18 +753,15 @@ function drawCalendar() {
     });
 }
 
-
 // ========================================
-//  勤務希望の登録・保存
+// 勤務希望
 // ========================================
 
-// 勤務希望を入力する画面を開く
 function openRequest(day = keyDate(new Date()), id = null) {
     if (!db.employees.length) {
         return alert("先にスタッフを追加してください");
     }
 
-    // 編集する日付とスタッフを記録する
     requestTarget = {
         day,
         id: id ?? db.employees[0].id
@@ -785,171 +769,141 @@ function openRequest(day = keyDate(new Date()), id = null) {
 
     $("reqDate").value = day;
 
-    // スタッフ選択欄を作成する
     $("reqEmployee").innerHTML = db.employees.map(e =>
         `<option value="${e.id}">${esc(e.name)}</option>`
     ).join("");
 
     $("reqEmployee").value = requestTarget.id;
 
-    // すでに希望が登録されていればフォームに反映する
     const r = req(day, requestTarget.id);
-    $("reqType").value = r?.request_type || "work";
-    $("reqComment").value = r?.comment || "";
-    // その日の出勤時間を表示する
     const e = db.employees.find(x => x.id === requestTarget.id);
     const s = shift(day, requestTarget.id);
 
-    // シフトに登録済みの時間があれば優先する
-    // なければ、その曜日に設定されたスタッフの出勤時間を表示する
+    $("reqType").value = r?.request_type || "work";
+    $("reqComment").value = r?.comment || "";
+
     $("reqStartTime").value =
-    s?.startTime ||
-    (e ? getEmployeeStartTime(e, day) : "17:00");
+        s?.startTime ||
+        r?.startTime ||
+        (e ? getEmployeeStartTime(e, day) : "17:00");
 
     $("requestContext").textContent = `${day} の勤務希望`;
+
     $("requestModal").classList.add("show");
 }
 
-    // 入力された勤務希望を保存する
-    function saveRequest() {
-        const day = $("reqDate").value;
-        const id = +$("reqEmployee").value;
-        const type = $("reqType").value;
-        const comment = $("reqComment").value.trim();
-        // この日の出勤時間を取得する
-        const startTime = $("reqStartTime").value || "17:00";
+function saveRequest() {
+    const day = $("reqDate").value;
+    const id = Number($("reqEmployee").value);
+    const type = $("reqType").value;
+    const comment = $("reqComment").value.trim();
+    const startTime = $("reqStartTime").value || "17:00";
 
-        if (!day || !id) {
-            return alert("日付とスタッフを選んでください");
-        }
-
-        const k = cellKey(day, id);
-
-        // スタッフ情報を取得する
-        const e = db.employees.find(x => x.id === id);
-
-        // 曜日ごとの標準出勤時間を取得する
-        const defaultTime = e
-            ? getEmployeeStartTime(e, day)
-            : "17:00";
-
-        // 入力された時間が曜日別の標準時間と異なるか確認する
-        const isCustomTime = startTime !== defaultTime;
-
-        // 希望もコメントも個別時間の指定もなければ、保存データを削除する
-        if (type === "none" && !comment && !isCustomTime) {
-            delete db.requests[k];
-        } else {
-
-            // 勤務希望・コメント・個別時間の設定を保存する
-            db.requests[k] = {
-                work_date: day,
-                employee_id: id,
-                request_type: type,
-                comment,
-                startTime,
-                startTimeIsCustom: isCustomTime
-            };
-        }
-
-            save();
-            close("requestModal");
-            render();
+    if (!day || !id || !db.employees.some(e => e.id === id)) {
+        return alert("日付とスタッフを選んでください");
     }
 
-// ========================================
-//  確定シフトの編集・保存
-// ========================================
+    const k = cellKey(day, id);
+    const e = db.employees.find(x => x.id === id);
+    const defaultTime = getEmployeeStartTime(e, day);
+    const isCustomTime = startTime !== defaultTime;
 
-// 確定シフトの編集画面を開く
-function openShift(day, id) {
-    // 確定シフトの編集は管理者だけに許可する
-    if (currentUserRole !== "admin") {
-        alert("確定シフトの編集は管理者のみ可能です。");
+    const old = db.requests[k];
+
+    if (type === "none" && !comment && !isCustomTime) {
+        delete db.requests[k];
+    } else {
+        db.requests[k] = {
+            work_date: day,
+            employee_id: id,
+            request_type: type,
+            comment,
+            startTime,
+            startTimeIsCustom: isCustomTime
+        };
+    }
+
+    if (!save()) {
+        if (old) db.requests[k] = old;
+        else delete db.requests[k];
         return;
     }
 
-    // 編集する日付とスタッフを記録する
+    close("requestModal");
+    render();
+}
+
+// ========================================
+// 確定シフトの編集
+// ========================================
+
+function openShift(day, id) {
     shiftTarget = { day, id };
 
     const e = db.employees.find(x => x.id === id);
-    const s = shift(day, id);
+    const s = shift(day, id) || {
+        status: "off",
+        startTime: "",
+        comment: ""
+    };
 
-    // 編集画面のタイトルを表示する
     $("shiftTitle").textContent = `${day} / ${e?.name || ""}`;
 
-    // 出勤・休みの設定を表示する
-    $("shiftStatus").value = s.status;
-
-    // コメントを表示する
+    $("shiftStatus").value = s.status || "off";
     $("shiftComment").value = s.comment || "";
 
-    // この日の勤務時間を表示する
-    // 個別設定がなければ、スタッフの基本出勤時間を使う
     $("shiftStartTime").value =
-    s.startTime ||
-    (e ? getEmployeeStartTime(e, day) : "17:00");
+        s.startTime ||
+        (e ? getEmployeeStartTime(e, day) : "17:00");
 
-    // 編集画面を開く
     $("shiftModal").classList.add("show");
 }
 
-
- // 編集した確定シフトを保存する
 function saveShift() {
     if (!shiftTarget) return;
 
     const k = cellKey(shiftTarget.day, shiftTarget.id);
+    const old = db.shifts[k];
 
-    // スタッフの基本情報を取得する
-    const e = db.employees.find(
-        x => x.id === shiftTarget.id
-    );
-
-    // 現在のシフト情報を取得する
-    const currentShift = db.shifts[k] || {};
-
-    // 入力された勤務時間を取得する
     const startTime = $("shiftStartTime").value || "17:00";
 
-    // その日・そのスタッフのシフトだけを保存する
     db.shifts[k] = {
-        ...currentShift,
+        ...old,
+        work_date: shiftTarget.day,
+        employee_id: shiftTarget.id,
         status: $("shiftStatus").value,
         startTime,
         comment: $("shiftComment").value.trim(),
         manually_modified: true
     };
 
-    save();
+    if (!save()) {
+        if (old) db.shifts[k] = old;
+        else delete db.shifts[k];
+        return;
+    }
+
     close("shiftModal");
     render();
 }
 
-
-// 指定したモーダル画面を閉じる
 function close(id) {
     $(id).classList.remove("show");
 }
 
-// 自動生成結果などのメッセージを表示する
 function message(s, type = "success") {
     $("generationMessage").innerHTML =
         `<div class="notice ${type}">${esc(s)}</div>`;
 }
 
-
 // ========================================
-// シフトの自動生成
+// 自動生成
 // ========================================
 
-// 指定期間のシフトを自動作成する
 function generate() {
-
     const start = $("generationStart").value;
     const end = $("generationEnd").value;
 
-    // 生成期間の入力チェック
     if (!start || !end) {
         return message("生成期間を指定してください", "error");
     }
@@ -966,22 +920,52 @@ function generate() {
     const b = parseDate(end);
     const n = Math.round((b - a) / 86400000) + 1;
 
-    // 一度に作成する期間を93日までに制限する
-    if (n > 93) {
-        return message("一度に生成できる期間は93日までです", "error");
+    if (n > 91) {
+        return message("一度に生成できる期間は91日までです", "error");
     }
 
     const s = db.settings;
 
-    // 各スタッフの勤務回数と連勤数を数える
-    const totals = Object.fromEntries(db.employees.map(e => [e.id, 0]));
-    const streak = Object.fromEntries(db.employees.map(e => [e.id, 0]));
+    const totals = Object.fromEntries(
+        db.employees.map(e => [e.id, 0])
+    );
 
-    // 今回作成するシフトと警告メッセージ
+    const streak = Object.fromEntries(
+        db.employees.map(e => [e.id, 0])
+    );
+
+    // 期間開始前の既存シフトから連勤状態を取得
+    const previousDay = keyDate(
+        new Date(a.getFullYear(), a.getMonth(), a.getDate() - 1)
+    );
+
+    db.employees.forEach(e => {
+        let count = 0;
+        let d = parseDate(previousDay);
+
+        for (let i = 0; i < 366; i++) {
+            const key = keyDate(d);
+            const oldShift = shift(key, e.id);
+
+            if (oldShift) {
+                if (oldShift.status === "work") {
+                    count++;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+
+            d.setDate(d.getDate() - 1);
+        }
+
+        streak[e.id] = count;
+    });
+
     const created = {};
     const warnings = [];
 
-    // 指定期間を1日ずつ処理する
     for (let i = 0; i < n; i++) {
         const dt = new Date(a);
         dt.setDate(dt.getDate() + i);
@@ -989,40 +973,45 @@ function generate() {
         const day = keyDate(dt);
         const wd = dt.getDay();
 
-        // 定休日・指定休業日は全員休みにする
-        if (s.closedWeekdays.includes(wd) || db.holidays.includes(day)) {
+        const isClosed =
+            s.closedWeekdays.includes(wd) ||
+            db.holidays.includes(day);
+
+        if (isClosed) {
             db.employees.forEach(e => {
-                created[cellKey(day, e.id)] = {
-                    work_date: day,
-                    employee_id: e.id,
-                    status: "off",
-                    comment: "定休日"
-                };
+                const k = cellKey(day, e.id);
 
+                // 手動修正済みのシフトは保持する
+                if (db.shifts[k]?.manually_modified) {
+                    created[k] = db.shifts[k];
+                } else {
+                    created[k] = {
+                        work_date: day,
+                        employee_id: e.id,
+                        status: "off",
+                        comment: "定休日",
+                        startTime: ""
+                    };
+                }
 
-                // 休みの日は連勤数をリセットする
                 streak[e.id] = 0;
             });
 
             continue;
         }
 
-        // 出勤候補者を抽出する
         const candidates = db.employees
-            // 出勤できない曜日のスタッフを除外する
             .filter(e => !(e.unavailableWeekdays || []).includes(wd))
-            // 各スタッフの勤務希望を取得する
             .map(e => ({ e, r: req(day, e.id) }))
-            // 休み希望のスタッフを除外する
             .filter(x =>
                 x.r?.request_type !== "off" &&
-                // 連勤上限に達しているスタッフを除外する
-                !(s.consecutiveEnabled &&
-                  streak[x.e.id] >= x.e.maxConsecutive &&
-                  x.r?.request_type !== "work")
+                !(
+                    s.consecutiveEnabled &&
+                    streak[x.e.id] >= x.e.maxConsecutive &&
+                    x.r?.request_type !== "work"
+                )
             );
 
-        // 出勤希望を優先し、勤務回数が少ない人を優先する
         candidates.sort((x, y) =>
             (Number(y.r?.request_type === "work") -
              Number(x.r?.request_type === "work")) * 100 +
@@ -1030,40 +1019,27 @@ function generate() {
             (y.e.level - x.e.level) * 0.1
         );
 
-        // 出勤希望のスタッフを先に選ぶ
-        // 出勤希望が必要人数を超える場合は、希望者全員を選ぶ
         const chosen = new Set(
             candidates
                 .filter(x => x.r?.request_type === "work")
                 .map(x => x.e.id)
         );
 
-        // 出勤希望者だけで必要人数に達していない場合、
-        // 勤務回数が少ない人などを順番に追加する
         for (const x of candidates) {
-            if (chosen.size >= s.basicRequired) {
-                break;
-            }
-
+            if (chosen.size >= s.basicRequired) break;
             chosen.add(x.e.id);
         }
 
-
-        // 基準レベル以上のスタッフが不足していないか確認する
         let qualified = candidates.filter(
             x => x.e.level >= s.levelTarget && !chosen.has(x.e.id)
         );
 
-        // 必要なレベル人数を満たすまで候補者を入れ替える
         while (
             [...chosen].filter(id =>
                 db.employees.find(e => e.id === id)?.level >= s.levelTarget
             ).length < s.levelRequired &&
             qualified.length
         ) {
-
-            // 出勤希望を出していない低レベルスタッフを探す
-            // 出勤希望者はレベル条件の入れ替えで外さない
             const low = [...chosen]
                 .map(id => db.employees.find(e => e.id === id))
                 .find(e =>
@@ -1073,151 +1049,106 @@ function generate() {
                 );
 
             if (low) {
-                // 低レベルスタッフを外す
                 chosen.delete(low.id);
-            } else if (chosen.size >= s.basicRequired && s.basicRequired > 0) {
-                // 入れ替えできない場合は処理を終了する
+            } else if (chosen.size >= s.basicRequired) {
                 break;
             }
 
-            // 基準レベル以上の候補者を追加する
             chosen.add(qualified.shift().e.id);
         }
 
-        // 当日の勤務人数と基準レベル以上の人数を数える
         let wc = 0;
         let lc = 0;
 
-        // 全スタッフの当日のシフトを決定する
         db.employees.forEach(e => {
+            const k = cellKey(day, e.id);
             const r = req(day, e.id);
 
-            // 選択されたスタッフが候補者に含まれているか確認する
+            // 手動修正したシフトを優先
+            if (db.shifts[k]?.manually_modified) {
+                created[k] = db.shifts[k];
+
+                if (created[k].status === "work") {
+                    totals[e.id]++;
+                    streak[e.id]++;
+                    wc++;
+
+                    if (e.level >= s.levelTarget) lc++;
+                } else {
+                    streak[e.id] = 0;
+                }
+
+                return;
+            }
+
             const work =
                 chosen.has(e.id) &&
                 candidates.some(x => x.e.id === e.id);
 
-            // 曜日ごとの出勤時間を取得する
-            // JavaScriptの曜日番号は、日曜が0、月曜が1、土曜が6
-            const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-
-            // 今日の曜日に設定された時間を取得する
-            const weekdayTime = e.startTimeOverrides?.[weekdayKeys[wd]];
-
-            // 曜日別の時間があればそれを使い、なければ基本時間を使う
-            const employeeStartTime = weekdayTime || e.startTime || "17:00";
-
-            // 勤務希望で個別の時間を指定している場合は、その時間を使う
-            // ただし、以前保存した基本時間のままなら曜日別の時間を優先する
-            const savedRequestTime = r?.startTime;
-            const basicTime = e.startTime || "17:00";
+            const employeeStartTime = getEmployeeStartTime(e, day);
 
             const requestTime =
-            (r?.startTimeIsCustom ||
-            (savedRequestTime && savedRequestTime !== basicTime))
-                ? savedRequestTime
-                : employeeStartTime;
+                r?.startTimeIsCustom
+                    ? r.startTime
+                    : employeeStartTime;
 
-            created[cellKey(day, e.id)] = {
-            work_date: day,
-            employee_id: e.id,
-            status: work ? "work" : "off",
-            comment: r?.comment || "",
-            startTime: work ? requestTime : ""
+            created[k] = {
+                work_date: day,
+                employee_id: e.id,
+                status: work ? "work" : "off",
+                comment: r?.comment || "",
+                startTime: work ? requestTime : ""
             };
-            // 曜日別の始業時間が正しく取得できているか確認する
-console.log("曜日別の始業時間チェック", {
-    日付: day,
-    スタッフ名: e.name,
-    曜日別設定: e.startTimeOverrides,
-    基本時間: e.startTime,
-    取得した時間: employeeStartTime,
-    シフトに保存する時間: work ? requestTime : ""
-});
 
             if (work) {
-                // 出勤したスタッフの勤務回数・連勤数を増やす
                 totals[e.id]++;
                 streak[e.id]++;
                 wc++;
 
-                // 基準レベル以上なら人数を数える
                 if (e.level >= s.levelTarget) lc++;
+
             } else {
-                // 休みなら連勤数をリセットする
                 streak[e.id] = 0;
             }
 
-            // 出勤希望が反映されなかった場合は警告する
             if (r?.request_type === "work" && !work) {
-                warnings.push(`${day}: ${e.name}さんの出勤希望を反映できませんでした`);
+                warnings.push(
+                    `${day}: ${e.name}さんの出勤希望を反映できませんでした`
+                );
             }
         });
 
-        // 必要な出勤人数を満たしているか確認する
         if (wc < s.basicRequired) {
             warnings.push(
                 `${day}: 必要人数不足（必要${s.basicRequired}人／配置${wc}人）`
             );
         }
 
-        // 必要なレベル人数を満たしているか確認する
         if (lc < s.levelRequired) {
             warnings.push(
                 `${day}: Lv${s.levelTarget}以上が不足（必要${s.levelRequired}人／配置${lc}人）`
             );
         }
 
-        // 実際に作成されたシフトの出勤時間を確認する
-        const staffAt1700 = db.employees.filter(e => {
-            const shift = created[cellKey(day, e.id)];
-
-            return (
-                shift?.status === "work" &&
-                (shift.startTime || "17:00") === "17:00"
-            );
-        }).length;
-
-        // 17:00の出勤人数が不足していたら警告する
-        if (staffAt1700 < 1) {
-            warnings.push(
-                `${day}: 始業時間に出勤するスタッフがいません`
-            );
-        }
-
-        // 設定した始業時間に必要な人数がいるか確認する
         const requiredTime = s.requiredStartTime || "17:00";
-        const requiredCount = Math.max(
-            0,
-            Number(s.requiredStartCount) || 0
-        );
+        const requiredCount = Number(s.requiredStartCount) || 0;
 
-                // 設定した始業時間までに出勤するスタッフを数える
         const actualCount = db.employees.filter(e => {
-            const shift = created[cellKey(day, e.id)];
+            const sh = created[cellKey(day, e.id)];
 
-            // 休みのスタッフは数えない
-            if (shift?.status !== "work") {
-                return false;
-            }
-
-            // スタッフの実際の始業時間を取得する
-            const startTime = shift.startTime || e.startTime || "17:00";
-
-            // 設定時間より早い、または同じ時間なら人数に含める
-            return startTime <= requiredTime;
+            return sh?.status === "work" &&
+                (sh.startTime || getEmployeeStartTime(e, day))
+                    <= requiredTime;
         }).length;
 
-        // 設定時間までに必要人数が揃わなければ警告する
         if (actualCount < requiredCount) {
             warnings.push(
                 `${day}: ${requiredTime}までの出勤人数不足（必要${requiredCount}人／配置${actualCount}人）`
             );
         }
-
     }
 
-    // 生成期間内の既存シフトを削除する
+    // 生成期間内の既存シフトを置き換える
     Object.keys(db.shifts).forEach(k => {
         const d = k.split("|")[0];
 
@@ -1226,66 +1157,60 @@ console.log("曜日別の始業時間チェック", {
         }
     });
 
-    // 今回作成したシフトを保存データに反映する
     Object.assign(db.shifts, created);
 
-    // 自動生成の結果を履歴として保存する
     const hist = {
         start,
         end,
         generatedAt: new Date().toLocaleString("ja-JP"),
         staffCount: db.employees.length,
         days: n,
-        shortage: warnings.filter(w => w.includes("必要人数不足")).length,
+        shortage: warnings.filter(
+            w => w.includes("必要人数不足")
+        ).length,
         levelShortage: warnings.filter(
             w => w.includes("Lv") && w.includes("不足")
         ).length,
         warnings: warnings.slice(0, 15)
     };
 
-    // 最新の履歴を先頭に追加し、最大30件まで残す
     db.history.unshift(hist);
     db.history = db.history.slice(0, 30);
 
-    // データを保存し、画面を更新する
-    save();
+    if (!save()) return;
+
     render();
 
-    // 生成結果と不足人数を表示する
     message(
         `自動生成しました。${n}日分／必要人数不足：${hist.shortage}日／レベル不足：${hist.levelShortage}日`,
         warnings.length ? "" : "success"
     );
 
-    // 警告があれば、最大8件を画面に表示する
     if (warnings.length) {
         $("generationMessage").innerHTML +=
-            `<div class="notice">${
-                warnings.slice(0, 8).map(esc).join("<br>")
-            }${
-                warnings.length > 8 ? `<br>ほか${warnings.length - 8}件` : ""
-            }</div>`;
+            `<div class="notice">
+                ${warnings.slice(0, 8).map(esc).join("<br>")}
+                ${warnings.length > 8 ? `<br>ほか${warnings.length - 8}件` : ""}
+            </div>`;
     }
 }
 
-
 // ========================================
-// 自動生成の履歴
+// 自動生成履歴
 // ========================================
 
-// 自動生成の履歴を画面に表示する
 function drawHistory() {
-    // 履歴がない場合の表示
     if (!db.history.length) {
         $("historyList").innerHTML =
             '<div class="empty-state">自動生成を実行すると、ここに履歴が表示されます。</div>';
         return;
     }
 
-    // 履歴の日付・人数・不足状況を表示する
     $("historyList").innerHTML = db.history.map(h =>
         `<div class="history-item">
-            <div class="history-date">${esc(h.start)} 〜 ${esc(h.end)}</div>
+            <div class="history-date">
+                ${esc(h.start)} 〜 ${esc(h.end)}
+            </div>
             <div class="history-summary">
                 生成日時：${esc(h.generatedAt)} ・
                 スタッフ：${h.staffCount}人 ・
@@ -1296,7 +1221,9 @@ function drawHistory() {
                 h.warnings?.length
                     ? `<details>
                         <summary class="muted">警告を見る</summary>
-                        <p class="history-summary">${h.warnings.map(esc).join("<br>")}</p>
+                        <p class="history-summary">
+                            ${h.warnings.map(esc).join("<br>")}
+                        </p>
                     </details>`
                     : ""
             }
@@ -1304,140 +1231,148 @@ function drawHistory() {
     ).join("");
 }
 
-// 確認後に自動生成の履歴を削除する
 function clearHistory() {
-
-    // 履歴が存在しない場合は終了する
     if (!db.history.length) return;
 
-    // 削除してよいか確認する
-    if (confirm("生成履歴を削除しますか？")) {
+    if (!confirm("生成履歴を削除しますか？")) return;
 
-        // 履歴を空にする
-        db.history = [];
+    const old = [...db.history];
+    db.history = [];
 
-        // データを保存する
-        save();
-
-        // 履歴の表示を更新する
-        drawHistory();
+    if (!save()) {
+        db.history = old;
+        return;
     }
+
+    drawHistory();
 }
 
-
 // ========================================
-//  データのバックアップ
+// JSONバックアップ
 // ========================================
 
-// 保存データをJSONファイルとしてダウンロードする
 function exportData() {
+    // 最新データを保存してから書き出す
+    if (!save()) return;
 
-    // データをJSON形式のファイルに変換する
     const blob = new Blob(
         [JSON.stringify(db, null, 2)],
         { type: "application/json;charset=utf-8" }
     );
 
-    // ダウンロード用の一時URLを作成する
     const url = URL.createObjectURL(blob);
-
-    // ダウンロードするファイル名を設定する
     const a = document.createElement("a");
+
     a.href = url;
     a.download = `shift-backup-${keyDate(new Date())}.json`;
 
-    // ダウンロードを実行する
+    document.body.appendChild(a);
     a.click();
+    a.remove();
 
-    // 使用した一時URLを解放する
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// JSONファイルを読み込んでデータを復元する
 async function importData(event) {
-
     const input = event.target;
     const file = input.files[0];
 
-    // ファイルが選択されていなければ終了する
     if (!file) return;
 
     try {
-        // ファイルの内容を文字列として読み込む
         const text = await file.text();
-
-        // JSON形式に変換する
         const data = JSON.parse(text);
 
-        // バックアップの基本的な形式を確認する
-        const isObject = value =>
-            value !== null &&
-            typeof value === "object" &&
-            !Array.isArray(value);
+        const isObject = v =>
+            v !== null &&
+            typeof v === "object" &&
+            !Array.isArray(v);
 
-        const isValid =
+        const valid =
             isObject(data) &&
             Array.isArray(data.employees) &&
-            isObject(data.requests) &&
-            isObject(data.shifts) &&
-            Array.isArray(data.holidays) &&
-            Array.isArray(data.history) &&
-            isObject(data.settings) &&
-            typeof data.settings.basicRequired === "number" &&
-            typeof data.settings.levelTarget === "number" &&
-            typeof data.settings.levelRequired === "number" &&
-            typeof data.settings.consecutiveEnabled === "boolean" &&
-            Array.isArray(data.settings.closedWeekdays) &&
-            typeof data.nextId === "number";
+            data.employees.every(e =>
+                isObject(e) &&
+                Number.isFinite(Number(e.id)) &&
+                typeof e.name === "string"
+            ) &&
+            (data.requests === undefined || isObject(data.requests)) &&
+            (data.shifts === undefined || isObject(data.shifts)) &&
+            (data.holidays === undefined || Array.isArray(data.holidays)) &&
+            (data.history === undefined || Array.isArray(data.history)) &&
+            (data.settings === undefined || isObject(data.settings));
 
-        // 形式が違うファイルは読み込まない
-        if (!isValid) {
-            alert("このファイルはシフト管理アプリのバックアップではないか、データ形式が正しくありません。");
+        if (!valid) {
+            alert("このファイルは正しいシフト管理アプリのバックアップではありません。");
             return;
         }
 
-        // 現在のデータを上書きする前に確認する
-        const confirmed = confirm(
+        if (!confirm(
             "バックアップを読み込むと、現在のデータが置き換わります。\n" +
-            "大切なデータは先に「データを書き出す」で保存してください。\n\n" +
-            "復元を実行しますか？"
-        );
+            "現在のデータを先にバックアップすることをおすすめします。\n\n" +
+            "復元しますか？"
+        )) return;
 
-        // キャンセルされた場合は何も変更しない
-        if (!confirmed) return;
+        const defaults = empty();
 
-        // 足りない設定項目には初期値を補う
         const restoredData = {
-            ...empty(),
+            ...defaults,
             ...data,
+
+            employees: data.employees.map(e => ({
+                startTime: "17:00",
+                startTimeOverrides: {},
+                maxConsecutive: 5,
+                unavailableWeekdays: [],
+                color: COLORS[0].name,
+                ...e
+            })),
+
+            requests: data.requests || {},
+            shifts: data.shifts || {},
+            holidays: data.holidays || [],
+            history: data.history || [],
+
             settings: {
-                ...empty().settings,
-                ...data.settings
-            }
+                ...defaults.settings,
+                ...(data.settings || {})
+            },
+
+            nextId: Math.max(
+                Number(data.nextId) || 1,
+                ...data.employees.map(e => Number(e.id) + 1 || 1)
+            )
         };
 
-        // 保存に成功した場合だけ、画面のデータを置き換える
+        // 先に保存を試し、成功した場合だけ画面を変更
         try {
-            localStorage.setItem(KEY, JSON.stringify(restoredData));
-        } catch (error) {
-            alert("データを保存できませんでした。現在のデータは変更していません。");
+            localStorage.setItem(
+                KEY,
+                JSON.stringify(restoredData)
+            );
+        } catch (e) {
+            alert("保存できませんでした。現在のデータは変更していません。");
             return;
         }
 
-        // 復元したデータをアプリに反映する
         db = restoredData;
 
-        // 設定と画面を更新する
+        // 編集状態をリセット
+        resetForm();
+
+        // 表示設定を復元
+        closed = [...(db.settings.closedWeekdays || [])];
+
         applySettings();
         render();
 
         alert("バックアップを復元しました！");
-    } catch (error) {
-        // JSONの読み込みや解析に失敗した場合
-        console.error("バックアップ復元エラー:", error);
-        alert("ファイルを読み込めませんでした。正しいJSONファイルか確認してください。");
+
+    } catch (e) {
+        console.error("復元エラー:", e);
+        alert("ファイルを読み込めませんでした。JSONファイルを確認してください。");
+
     } finally {
-        // 同じファイルをもう一度選択できるようにする
         input.value = "";
     }
 }
