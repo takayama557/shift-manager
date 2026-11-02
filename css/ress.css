@@ -1,0 +1,33 @@
+@charset "UTF-8";
+/* 1. すべての要素で、パディングとボーダーを幅・高さに含める（超重要） */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 2. 記事系タグのお節介な余白（margin）をまるごとリセット */
+body, h1, h2, h3, h4, p, ul, ol, dl, figure {
+  margin: 0;
+  padding: 0;
+}
+
+/* 3. リストの「・」を消す */
+ul, ol {
+  list-style: none;
+}
+
+/* 4. 画像が親要素からはみ出さないようにする */
+img {
+  max-width: 100%;
+  display: block; /* 下に謎の隙間ができるのを防ぐ */
+}
+
+/* 5. フォーム要素のフォントを他のテキストと統一する */
+input, button, textarea, select {
+  font: inherit;
+}
+
+/* 全フォーム要素のリセット */
+input, select {
+  -webkit-appearance: none;
+  border: none;
+}

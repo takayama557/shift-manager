@@ -1,0 +1,782 @@
+@charset "UTF-8";
+
+/* ==================================================
+   共通設定
+   PCの基本デザインは、これまでの表示を維持します。
+   ================================================== */
+
+html{
+  scroll-behavior:smooth;
+  scroll-padding-top: 100px
+}
+
+body {
+  font-family: "Kiwi Maru", serif;
+  font-weight: 400;
+  font-style: normal;
+  background: #f7f8fc;
+  color: #384152;
+  line-height: 1.55;
+}
+
+/* ==================================================
+   ヘッダー
+   ================================================== */
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: #ffffffef;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e8ebf2;
+}
+
+/* ヘッダーとページ全体の横幅・余白 */
+.header-inner,
+.container {
+  max-width: 1400px;
+  margin: auto;
+  padding: 16px 24px;
+}
+
+
+/* ロゴ・ナビゲーション・ログアウトボタンの配置 */
+.header-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+}
+
+/* ナビゲーションを右側に配置 */
+nav {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px 16px;
+  margin-left: auto;
+}
+
+/* ログアウトボタン */
+#logoutBtn {
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+/* ロゴ */
+.logo {
+  font-size: 22px;
+  font-weight: 800;
+  color: #5966b8;
+  text-decoration: none;
+}
+
+/* ナビゲーション */
+nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px 16px;
+}
+
+nav a {
+  text-decoration: none;
+  color: #697386;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+nav a:hover {
+  color: #5966b8;
+}
+
+/* ==================================================
+   見出し
+   ================================================== */
+
+.page-heading,
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.page-heading {
+  margin: 12px 0 20px;
+}
+
+.eyebrow {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  color: #9098d5;
+  margin-bottom: 4px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 19px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+h3 {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* ==================================================
+   カード・レイアウト
+   ================================================== */
+
+.card {
+  background: #fff;
+  border: 1px solid #e8ebf2;
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 22px #46506e0d;
+}
+
+/* スタッフ管理と生成条件を横に並べる */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+/* ==================================================
+   フォーム・入力欄
+   ================================================== */
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #687184;
+}
+
+input:not([type="checkbox"]),
+select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #dfe3eb;
+  border-radius: 10px;
+  background: white;
+  color: #394150;
+  outline: none;
+}
+
+input:focus,
+select:focus {
+  border-color: #a9b1eb;
+  box-shadow: 0 0 0 3px #eef0ff;
+}
+
+/* チェックボックス */
+input[type="checkbox"] {
+  accent-color: #7d89d8;
+  width: 17px;
+  height: 17px;
+}
+
+/* 2つの入力項目を横に並べる */
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* ==================================================
+   ボタン
+   ================================================== */
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 15px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primary {
+  background: #7d89d8;
+  color: white;
+}
+
+.secondary {
+  background: #eef0f6;
+  color: #596174;
+}
+
+.danger {
+  background: #ffe6ea;
+  color: #bd5b68;
+}
+
+button:hover {
+  opacity: 0.88;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+/* ボタンを横並びにする共通領域 */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ==================================================
+   カレンダー
+   ================================================== */
+
+.calendar-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.calendar-toolbar input {
+  width: 145px;
+}
+
+.month-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin-left: 5px;
+}
+
+/* カレンダー部分は横スクロール可能にする */
+.calendar-wrap {
+  overflow: auto;
+  border: 1px solid #e7eaf1;
+  border-radius: 14px;
+}
+
+/* 1列目にスタッフ名、続いて最大31日分を表示 */
+.calendar {
+  min-width: 900px;
+  display: grid;
+  grid-template-columns: 170px repeat(31, 50px);
+}
+
+.calendar > div {
+  border-right: 1px solid #edf0f5;
+  border-bottom: 1px solid #edf0f5;
+}
+
+/* カレンダーの曜日・日付見出し */
+.calendar-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fafbfe;
+  padding: 8px 3px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.calendar-head.sunday .weekday-label {
+  color: #e05b78;
+}
+
+.calendar-head.saturday .weekday-label {
+  color: #3285c7;
+}
+
+.weekday-label {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 3px;
+}
+
+.date-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* スタッフ名の列を固定 */
+.employee-name {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: white;
+  padding: 8px 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.employee-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employee-name small {
+  color: #8a92a2;
+  font-size: 10px;
+}
+
+/* スタッフのアイコンカラー */
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* カレンダーの日付セル */
+.day-cell {
+  min-height: 70px;
+  padding: 4px;
+  text-align: center;
+  cursor: pointer;
+  background: white;
+}
+
+.day-cell:hover {
+  background: #fafbff;
+}
+
+.day-cell.closed {
+  background: #fff1f3;
+  color: #c8737e;
+}
+
+.day-cell.unavailable {
+  background: #f0f1f4;
+  color: #999;
+}
+
+.day-cell.confirmed-work {
+  background: #effaf3;
+}
+
+.day-cell.confirmed-off {
+  background: #f5f5f7;
+}
+
+/* 出勤・休みのマーク */
+.confirmed-mark {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.preference-mark {
+  margin-top: 3px;
+  font-size: 9px;
+  color: #8b93a4;
+  line-height: 1.1;
+}
+
+.confirmed-work .confirmed-mark {
+  color: #4f9b70;
+}
+
+.confirmed-off .confirmed-mark {
+  color: #858b98;
+}
+
+.pref-work {
+  color: #6480d5;
+}
+
+.pref-off {
+  color: #d78391;
+}
+
+.day-number {
+  font-size: 10px;
+  color: #a0a6b2;
+}
+
+/* カレンダーの凡例 */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 13px 0;
+  color: #747d90;
+  font-size: 12px;
+}
+
+.help-text {
+  margin-top: 10px;
+}
+
+/* ==================================================
+   スタッフ管理
+   ================================================== */
+
+.staff-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.staff-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid #eceef4;
+  border-radius: 12px;
+}
+
+.staff-info {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.staff-name {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.staff-meta,
+.muted {
+  font-size: 12px;
+  color: #8b93a4;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.row-actions button {
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+/* アイコンカラーの選択肢 */
+.color-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  min-height: 34px;
+  align-items: center;
+}
+
+.color-choice {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 0 0 1px #d7dbe4;
+  padding: 0;
+}
+
+.color-choice.selected {
+  box-shadow: 0 0 0 3px #7079c7;
+}
+
+/* 曜日選択ボタン */
+.weekday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 6px 0 14px;
+}
+
+.weekday {
+  padding: 7px 11px;
+  background: #f0f2f7;
+  color: #697184;
+  border-radius: 9px;
+}
+
+.weekday.selected {
+  background: #dfe3ff;
+  color: #5965b5;
+}
+
+/* スタッフ登録フォームの操作ボタン */
+.form-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* 登録スタッフ見出し */
+.subsection-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #edf0f4;
+}
+
+.count-pill {
+  background: #f0f1ff;
+  color: #646eb9;
+  border-radius: 20px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* ==================================================
+   シフト生成条件
+   ================================================== */
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-top: 23px;
+}
+
+.checkbox-field label {
+  margin: 0;
+}
+
+.button-bottom {
+  display: flex;
+  align-items: end;
+}
+
+/* 指定休業日の一覧 */
+.holiday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.holiday-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 9px;
+  padding: 6px 9px;
+  background: #fff0f2;
+  color: #a65f6a;
+  font-size: 12px;
+}
+
+.holiday-chip button {
+  padding: 1px 4px;
+  background: transparent;
+  color: #a65f6a;
+}
+
+/* お知らせ・成功・エラーメッセージ */
+.notice {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff8e8;
+  color: #80651e;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.notice.success {
+  background: #edf9f1;
+  color: #4d8c63;
+}
+
+.notice.error {
+  background: #fff0f1;
+  color: #b85c69;
+}
+
+/* データがない場合の表示 */
+.empty-state {
+  border: 1px dashed #dfe3eb;
+  border-radius: 12px;
+  padding: 16px;
+  color: #8b93a4;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ==================================================
+   モーダル画面
+   ================================================== */
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #1e233259;
+  padding: 20px;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-box {
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: white;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 70px #26304b30;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* JavaScriptから表示・非表示を切り替える */
+.hidden {
+  display: none !important;
+}
+
+/* ==================================================
+   自動生成履歴・フッター
+   ================================================== */
+
+.history-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.history-date {
+  font-weight: 800;
+}
+
+.history-summary {
+  color: #8b93a4;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 2px 28px;
+  color: #9aa1b0;
+  font-size: 11px;
+}
+
+/* ==================================================
+   カレンダー内の出勤時間
+   ================================================== */
+
+.shift-time {
+  font-size: 11.5px;
+  line-height: 1.2;
+  font-weight: normal;
+  margin-top: 2px;
+  color: #4d8c63;
+}
+
+/* ==================================================
+   スマートフォン表示
+   PCのレイアウトには影響しないように、
+   画面幅が650px以下の場合だけ調整します。
+   ================================================== */
+
+@media screen and (max-width: 650px) {
+
+  /* ページ全体が画面の右にはみ出さないようにする */
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* スマホでは文字と余白を少しだけコンパクトにする */
+  body {
+    font-size: 90%;
+  }
+
+  /* ヘッダーと本文をスマホの横幅に合わせる */
+  .header-inner,
+  .container {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 12px;
+  }
+
+  /* ヘッダー内の要素を画面幅に合わせて折り返す */
+  .header-inner {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  /* ナビゲーションが横にはみ出す場合は、ナビ部分だけ横に動かせるようにする */
+  nav {
+    max-width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: 8px 12px;
+    white-space: nowrap;
+  }
+
+  /* スタッフ管理などのカードは縦に並べる */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  /* カード内の余白を少し小さくする */
+  .card {
+    min-width: 0;
+    padding: 14px;
+  }
+
+  /* 入力欄が横にはみ出さないようにする */
+  .form-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* フッターの内容も画面幅に合わせて折り返す */
+  footer {
+    flex-wrap: wrap;
+  }
+
+  /* カレンダーはカード全体を押し広げず、カレンダー部分だけ横スクロール */
+  .calendar-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* カレンダーの日付列は読みやすさを保つため、必要な場合だけ横スクロール */
+  .calendar {
+    min-width: 900px;
+  }
+}
