@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>このアプリの使い方</title>
+
+    <!-- ファビコン -->
+    <link rel="icon" href="/shift-work_icon.png">
+
+    <!-- CSS JSリンク -->
+    <link rel="stylesheet" href="css/ress.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/explanation.css">
+
+    <!-- kiwi Maruフォント -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&family=Kiwi+Maru&family=Zen+Kurenaido&display=swap"
+      rel="stylesheet">
+
+</head>
+
+<body>
+    <!-- ヘッダー -->
+    <header>
+      <div class="header-inner">
+        <a class="logo" href="index.html#calendar-section">shift manager</a>
+        <nav>
+          <a href="explanation.html">このアプリの使い方</a>
+          <a href="index.html#calendar-section">カレンダー</a>
+          <a href="index.html#staff-section">スタッフ管理</a>
+          <a href="index.html#conditions-section">生成条件</a>
+          <a href="index.html#history-section">生成履歴</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero container">
+      <div class="hero-grid">
+        <div>
+          <div class="kicker">SHIFT SCHEDULING APP</div>
+          <h1>毎月のシフト作成を<br>もっと分かりやすく。</h1>
+          <p class="lead">スタッフの希望や勤務条件をひとつの画面にまとめ、シフトの確認・作成・調整をサポートするアプリです。</p>
+          <div class="actions">
+            <a class="btn primary" href="#features">機能を確認する</a>
+            <a class="btn secondary" href="#flow">使い方を見る</a>
+          </div>
+        </div>
+        <div class="screenshot">
+          <img src="image/main.png"
+            alt="shift managerの実際の画面。月間シフト、スタッフ管理、シフト生成条件を表示">
+        </div>
+      </div>
+    </section>
+
+    <!-- 主な機能 -->
+    <section class="container" id="features">
+      <div class="section-title">
+        <div class="kicker">FEATURES</div>
+        <h2>主な機能</h2>
+        <p class="sub">シフト管理に必要な情報を、ひとつの画面で確認できます。</p>
+      </div>
+
+      <div class="cards">
+        <article class="card">
+          <div class="icon pink">🗓️</div>
+          <h3>月間シフトカレンダー</h3>
+          <p>月ごとの勤務予定を一覧表示。<br>
+            スタッフは、カレンダーの枠をタップし勤務希望を出せます。<br>
+            管理者は、スタッフごとの出勤・休み希望を見ながら、日付単位でシフトを確認・調整できます。</p>
+            <br>
+          <img src="image/shiftCa.png" alt="シフト表の画像">
+          <img src="image/request.png" alt="シフト表の画像">
+        </article>
+
+        <article class="card">
+          <div class="icon blue">👥</div>
+          <h3>スタッフ管理</h3>
+          <p>スタッフ名、レベル、アイコンカラー、出勤時間、最大連勤日数、出勤できない曜日などを登録・編集できます。<br><br>
+          </p>
+          <img src="image/staff.png" alt="シフト表の画像">
+        </article>
+
+        <article class="card">
+          <div class="icon mint">⚙️</div>
+          <h3>シフト生成条件</h3>
+          <p>必要人数、必要なレベル、勤務開始時間、毎週の定休日、指定休業日などを設定できます。<br><br></p>
+          <img src="image/shiftGe.png" alt="シフト表の画像">
+        </article>
+
+        <article class="card">
+          <div class="icon yellow">✨</div>
+          <h3>シフト自動生成</h3>
+          <p>登録したスタッフ情報・希望・条件をもとに<br>
+            シフト案を自動作成。<br>作成間隔を指定できます。(最大91日)<br>
+            作成後は内容を確認して手動で修正できます。<br><br></p>
+          <img src="image/autGe.png" alt="シフト表の画像">
+        </article>
+
+        <article class="card">
+          <div class="icon pink">📦</div>
+          <h3>バックアップ・復元</h3>
+          <p>登録データをJSON形式で保存し、<br>
+            バックアップファイルを読み込んで復元できます。<br><br></p>
+          <img src="image/backup.png" alt="シフト表の画像">
+        </article>
+
+        <article class="card">
+          <div class="icon blue">📋</div>
+          <h3>自動生成履歴</h3>
+          <p>過去に作成したシフトの履歴を確認し、<br>
+            作成内容を振り返ることができます。<br><br></p>
+          <img src="image/history.png" alt="シフト表の画像">
+        </article>
+      </div>
+    </section>
+
+    <!-- 基本的な使い方 -->
+    <section class="container" id="flow">
+      <div class="section-title">
+        <div class="kicker">HOW TO USE</div>
+        <h2>基本的な使い方</h2>
+        <p class="sub">次の4ステップでシフト案を作成します。</p>
+      </div>
+
+      <div class="steps">
+        <article class="step">
+          <div class="num">STEP 01</div>
+          <h3>スタッフを登録・編集</h3>
+          <p>名前・レベル・勤務可能な曜日・出勤時間などを登録します。<br>作成後も編集可能です。</p>
+        </article>
+
+        <article class="step">
+          <div class="num">STEP 02</div>
+          <h3>スタッフの希望を入力</h3>
+          <p>カレンダーから出勤希望や休み希望を入力します。</p>
+        </article>
+
+        <article class="step">
+          <div class="num">STEP 03</div>
+          <h3>シフト生成条件を設定</h3>
+          <p>必要人数や必要レベル、定休日などを設定します。</p>
+        </article>
+
+        <article class="step">
+          <div class="num">STEP 04</div>
+          <h3>シフトを作成</h3>
+          <p>自動生成したシフト案を確認し、<br>
+            必要に応じて手動で調整します。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="container" id="rules">
+      <div class="section-title">
+        <div class="kicker">GENERATION RULES</div>
+        <h2>自動生成で考慮する条件</h2>
+        <p class="sub">複数の条件を組み合わせて、シフト作成をサポートします。</p>
+      </div>
+      <div class="rulebox">
+        <ul class="rules">
+          <li>
+            <span class="tick">・</span>
+            <span>定休日・指定休業日を勤務対象から除外</span>
+          </li>
+          <li>
+            <span class="tick">・</span>
+            <span>スタッフの出勤希望・休み希望を考慮</span>
+          </li>
+          <li>
+            <span class="tick">・</span>
+            <span>日ごとの必要人数を考慮</span>
+          </li>
+          <li>
+            <span class="tick">・</span>
+            <span>必要なレベルのスタッフを考慮</span>
+          </li>
+          <li>
+            <span class="tick">・</span>
+            <span>最大連勤日数などの勤務条件を考慮</span>
+          </li>
+          <li>
+            <span class="tick">・</span>
+            <span>勤務回数の偏りをできるだけ抑える</span>
+          </li>
+        </ul>
+        <div class="notice">自動生成はシフト案を作成するための補助機能です。実際の勤務状況に合わせて、生成結果を確認・調整してください。<br>
+        カレンダー上部にでるこの枠の警告文が不足している日付と人数を教えてくれます。<br>
+      見逃した際は生成履歴から確認できます。</div>
+      </div>
+    </section>
+
+    <!-- 開発について -->
+    <section class="container" id="about">
+      <div class="section-title">
+        <div class="kicker">ABOUT THIS PROJECT</div>
+        <h2>開発について</h2>
+        <p class="sub">実際のシフト管理を想定し、使いやすさと作業の効率化を目指して制作しています。</p>
+      </div>
+      <!-- 開発で工夫した点 -->
+      <div class="about-card">
+        <h3>開発で工夫したこと</h3>
+        <p class="sub">
+          スタッフ情報・希望・生成条件を分けて管理し、入力した内容を月間カレンダーで確認できる構成にしました。<br>
+          また、自動生成だけに頼らず、生成後に管理者側が確認して手動で調整できるようにしています。
+        </p>
+        <h3 style="margin-top:22px">使用技術</h3>
+        <div class="tech">
+          <span class="tag">HTML</span>
+          <span class="tag">CSS</span>
+          <span class="tag">JavaScript</span>
+        </div>
+      </div>
+    </section>
+    </main>
+
+    <footer>© shift manager · Portfolio Project</footer>
+
+    </body>
+    </html>
+
+
+</body>
+</html>
