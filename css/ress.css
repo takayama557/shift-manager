@@ -25,3 +25,21 @@ img {
 input, button, textarea, select {
   font: inherit;
 }
+
+/* 全フォーム要素のリセット */
+input, select {
+  -webkit-appearance: none;
+  border: none;
+}
+
+/* ボタン系だけ無効化 */
+input[type="submit"],
+input[type="button"] {
+  -webkit-appearance: none;
+}
+
+/* ラジオ・チェックボックス非表示 */
+input[type="radio"],
+input[type="checkbox"] {
+  display: none;
+}
