@@ -369,34 +369,34 @@ button:disabled {
   color: #999;
 }
 
+/* 出勤・休みの背景色 */
+
 .day-cell.confirmed-work {
-  background: #effaf3;
+    background: #e5f3e9;
 }
 
 .day-cell.confirmed-off {
-  background: #f5f5f7;
+    background: #fafafa;
 }
 
 /* 出勤・休みのマーク */
+
 .confirmed-mark {
-  font-size: 18px;
-  font-weight: 900;
-  line-height: 1.1;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1.1;
 }
 
-.preference-mark {
-  margin-top: 3px;
-  font-size: 9px;
-  color: #8b93a4;
-  line-height: 1.1;
-}
+/* 出勤：少し濃いめのグリーン */
 
 .confirmed-work .confirmed-mark {
-  color: #4f9b70;
+    color: #287a4b;
 }
 
+/* 休：薄いグレー */
+
 .confirmed-off .confirmed-mark {
-  color: #858b98;
+    color: #b8bdc5;
 }
 
 .pref-work {
