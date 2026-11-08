@@ -414,6 +414,12 @@ button:disabled {
   color: #a0a6b2;
 }
 
+/* 希望休の文字サイズ */
+.day-cell .preference-mark {
+    font-size: 11.5px;
+    white-space: nowrap;
+}
+
 /* カレンダーの凡例 */
 .legend {
   display: flex;
