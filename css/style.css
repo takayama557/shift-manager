@@ -274,7 +274,7 @@ button:disabled {
 .calendar {
   min-width: 900px;
   display: grid;
-  grid-template-columns: 170px repeat(31, 50px);
+  grid-template-columns: 170px repeat(31, 56px);
 }
 
 .calendar > div {
@@ -362,6 +362,8 @@ button:disabled {
 .day-cell.closed {
   background: #fff1f3;
   color: #c8737e;
+  font-size: 11.5px;
+  white-space: nowrap;
 }
 
 .day-cell.unavailable {
